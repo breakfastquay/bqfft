@@ -9,7 +9,7 @@
 #include <string>
 #include <set>
 
-namespace BreakfastQuay {
+namespace breakfastquay {
 
 class FFTImpl;
 

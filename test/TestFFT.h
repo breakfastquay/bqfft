@@ -13,7 +13,7 @@
 
 #include "Compares.h"
 
-namespace BreakfastQuay {
+namespace breakfastquay {
 
 class TestFFT : public QObject
 {

@@ -76,7 +76,7 @@ extern "C" {
 #endif
 #endif
 
-namespace BreakfastQuay {
+namespace breakfastquay {
 
 class FFTImpl
 {
