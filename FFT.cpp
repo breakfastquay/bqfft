@@ -4,9 +4,9 @@
 #include "FFT.h"
 #include "system/Thread.h"
 #include "base/Profiler.h"
-#include "bqvec/Allocators.h"
-#include "bqvec/VectorOps.h"
-#include "bqvec/VectorOpsComplex.h"
+#include "Allocators.h"
+#include "VectorOps.h"
+#include "VectorOpsComplex.h"
 
 //#define FFT_MEASUREMENT 1
 
