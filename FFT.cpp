@@ -3,7 +3,6 @@
 
 #include "FFT.h"
 #include "system/Thread.h"
-#include "base/Profiler.h"
 #include "Allocators.h"
 #include "VectorOps.h"
 #include "VectorOpsComplex.h"
@@ -173,7 +172,6 @@ public:
     }
 
     void packFloat(const float *R__ re, const float *R__ im) {
-        Profiler profiler("D_IPP::packFloat");
         int index = 0;
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -195,7 +193,6 @@ public:
     }
 
     void packDouble(const double *R__ re, const double *R__ im) {
-        Profiler profiler("D_IPP::packDouble");
         int index = 0;
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -217,7 +214,6 @@ public:
     }
 
     void unpackFloat(float *re, float *R__ im) { // re may be equal to m_fpacked
-        Profiler profiler("D_IPP::unpackFloat");
         int index = 0;
         const int hs = m_size/2;
         if (im) {
@@ -234,7 +230,6 @@ public:
     }        
 
     void unpackDouble(double *re, double *R__ im) { // re may be equal to m_dpacked
-        Profiler profiler("D_IPP::unpackDouble");
         int index = 0;
         const int hs = m_size/2;
         if (im) {
@@ -251,29 +246,24 @@ public:
     }        
 
     void forward(const double *R__ realIn, double *R__ realOut, double *R__ imagOut) {
-        Profiler profiler("D_IPP::forward [d]");
         if (!m_dspec) initDouble();
         ippsFFTFwd_RToCCS_64f(realIn, m_dpacked, m_dspec, m_dbuf);
         unpackDouble(realOut, imagOut);
     }
 
     void forwardInterleaved(const double *R__ realIn, double *R__ complexOut) {
-        Profiler profiler("D_IPP::forwardInterleaved [d]");
         if (!m_dspec) initDouble();
         ippsFFTFwd_RToCCS_64f(realIn, complexOut, m_dspec, m_dbuf);
     }
 
     void forwardPolar(const double *R__ realIn, double *R__ magOut, double *R__ phaseOut) {
-        Profiler profiler("D_IPP::forwardPolar [d]");
         if (!m_dspec) initDouble();
         ippsFFTFwd_RToCCS_64f(realIn, m_dpacked, m_dspec, m_dbuf);
         unpackDouble(m_dpacked, m_dspare);
-        Profiler profiler2("D_IPP::forwardPolar [d] conv");
         ippsCartToPolar_64f(m_dpacked, m_dspare, magOut, phaseOut, m_size/2+1);
     }
 
     void forwardMagnitude(const double *R__ realIn, double *R__ magOut) {
-        Profiler profiler("D_IPP::forwardMagnitude [d]");
         if (!m_dspec) initDouble();
         ippsFFTFwd_RToCCS_64f(realIn, m_dpacked, m_dspec, m_dbuf);
         unpackDouble(m_dpacked, m_dspare);
@@ -281,29 +271,24 @@ public:
     }
 
     void forward(const float *R__ realIn, float *R__ realOut, float *R__ imagOut) {
-        Profiler profiler("D_IPP::forward [f]");
         if (!m_fspec) initFloat();
         ippsFFTFwd_RToCCS_32f(realIn, m_fpacked, m_fspec, m_fbuf);
         unpackFloat(realOut, imagOut);
     }
 
     void forwardInterleaved(const float *R__ realIn, float *R__ complexOut) {
-        Profiler profiler("D_IPP::forwardInterleaved [f]");
         if (!m_fspec) initFloat();
         ippsFFTFwd_RToCCS_32f(realIn, complexOut, m_fspec, m_fbuf);
     }
 
     void forwardPolar(const float *R__ realIn, float *R__ magOut, float *R__ phaseOut) {
-        Profiler profiler("D_IPP::forwardPolar [f]");
         if (!m_fspec) initFloat();
         ippsFFTFwd_RToCCS_32f(realIn, m_fpacked, m_fspec, m_fbuf);
         unpackFloat(m_fpacked, m_fspare);
-        Profiler profiler2("D_IPP::forwardPolar [f] conv");
         ippsCartToPolar_32f(m_fpacked, m_fspare, magOut, phaseOut, m_size/2+1);
     }
 
     void forwardMagnitude(const float *R__ realIn, float *R__ magOut) {
-        Profiler profiler("D_IPP::forwardMagnitude [f]");
         if (!m_fspec) initFloat();
         ippsFFTFwd_RToCCS_32f(realIn, m_fpacked, m_fspec, m_fbuf);
         unpackFloat(m_fpacked, m_fspare);
@@ -311,29 +296,24 @@ public:
     }
 
     void inverse(const double *R__ realIn, const double *R__ imagIn, double *R__ realOut) {
-        Profiler profiler("D_IPP::inverse [d]");
         if (!m_dspec) initDouble();
         packDouble(realIn, imagIn);
         ippsFFTInv_CCSToR_64f(m_dpacked, realOut, m_dspec, m_dbuf);
     }
 
     void inverseInterleaved(const double *R__ complexIn, double *R__ realOut) {
-        Profiler profiler("D_IPP::inverse [d]");
         if (!m_dspec) initDouble();
         ippsFFTInv_CCSToR_64f(complexIn, realOut, m_dspec, m_dbuf);
     }
 
     void inversePolar(const double *R__ magIn, const double *R__ phaseIn, double *R__ realOut) {
-        Profiler profiler("D_IPP::inversePolar [d]");
         if (!m_dspec) initDouble();
         ippsPolarToCart_64f(magIn, phaseIn, realOut, m_dspare, m_size/2+1);
-        Profiler profiler2("D_IPP::inversePolar [d] postconv");
         packDouble(realOut, m_dspare); // to m_dpacked
         ippsFFTInv_CCSToR_64f(m_dpacked, realOut, m_dspec, m_dbuf);
     }
 
     void inverseCepstral(const double *R__ magIn, double *R__ cepOut) {
-        Profiler profiler("D_IPP::inverseCepstral [d]");
         if (!m_dspec) initDouble();
         const int hs1 = m_size/2 + 1;
         ippsCopy_64f(magIn, m_dspare, hs1);
@@ -344,29 +324,24 @@ public:
     }
     
     void inverse(const float *R__ realIn, const float *R__ imagIn, float *R__ realOut) {
-        Profiler profiler("D_IPP::inverse [f]");
         if (!m_fspec) initFloat();
         packFloat(realIn, imagIn);
         ippsFFTInv_CCSToR_32f(m_fpacked, realOut, m_fspec, m_fbuf);
     }
 
     void inverseInterleaved(const float *R__ complexIn, float *R__ realOut) {
-        Profiler profiler("D_IPP::inverse [f]");
         if (!m_fspec) initFloat();
         ippsFFTInv_CCSToR_32f(complexIn, realOut, m_fspec, m_fbuf);
     }
 
     void inversePolar(const float *R__ magIn, const float *R__ phaseIn, float *R__ realOut) {
-        Profiler profiler("D_IPP::inversePolar [f]");
         if (!m_fspec) initFloat();
         ippsPolarToCart_32f(magIn, phaseIn, realOut, m_fspare, m_size/2+1);
-        Profiler profiler2("D_IPP::inversePolar [f] postconv");
         packFloat(realOut, m_fspare); // to m_fpacked
         ippsFFTInv_CCSToR_32f(m_fpacked, realOut, m_fspec, m_fbuf);
     }
 
     void inverseCepstral(const float *R__ magIn, float *R__ cepOut) {
-        Profiler profiler("D_IPP::inverseCepstral [f]");
         if (!m_fspec) initFloat();
         const int hs1 = m_size/2 + 1;
         ippsCopy_32f(magIn, m_fspare, hs1);
@@ -568,7 +543,6 @@ public:
     }
 
     void forward(const double *R__ realIn, double *R__ realOut, double *R__ imagOut) {
-        Profiler profiler("D_VDSP::forward [d]");
         if (!m_dspec) initDouble();
         packReal(realIn);
         vDSP_fft_zriptD(m_dspec, m_dpacked, 1, m_dbuf, m_order, FFT_FORWARD);
@@ -577,7 +551,6 @@ public:
     }
 
     void forwardInterleaved(const double *R__ realIn, double *R__ complexOut) {
-        Profiler profiler("D_VDSP::forward [d]");
         if (!m_dspec) initDouble();
         packReal(realIn);
         vDSP_fft_zriptD(m_dspec, m_dpacked, 1, m_dbuf, m_order, FFT_FORWARD);
@@ -586,7 +559,6 @@ public:
     }
 
     void forwardPolar(const double *R__ realIn, double *R__ magOut, double *R__ phaseOut) {
-        Profiler profiler("D_VDSP::forwardPolar [d]");
         if (!m_dspec) initDouble();
         const int hs1 = m_size/2+1;
         packReal(realIn);
@@ -600,7 +572,6 @@ public:
     }
 
     void forwardMagnitude(const double *R__ realIn, double *R__ magOut) {
-        Profiler profiler("D_VDSP::forwardMagnitude [d]");
         if (!m_dspec) initDouble();
         packReal(realIn);
         vDSP_fft_zriptD(m_dspec, m_dpacked, 1, m_dbuf, m_order, FFT_FORWARD);
@@ -614,7 +585,6 @@ public:
     }
 
     void forward(const float *R__ realIn, float *R__ realOut, float *R__ imagOut) {
-        Profiler profiler("D_VDSP::forward [f]");
         if (!m_fspec) initFloat();
         packReal(realIn);
         vDSP_fft_zript(m_fspec, m_fpacked, 1, m_fbuf, m_order, FFT_FORWARD);
@@ -623,7 +593,6 @@ public:
     }
 
     void forwardInterleaved(const float *R__ realIn, float *R__ complexOut) {
-        Profiler profiler("D_VDSP::forward [f]");
         if (!m_fspec) initFloat();
         packReal(realIn);
         vDSP_fft_zript(m_fspec, m_fpacked, 1, m_fbuf, m_order, FFT_FORWARD);
@@ -632,7 +601,6 @@ public:
     }
 
     void forwardPolar(const float *R__ realIn, float *R__ magOut, float *R__ phaseOut) {
-        Profiler profiler("D_VDSP::forwardPolar [f]");
         if (!m_fspec) initFloat();
         const int hs1 = m_size/2+1;
         packReal(realIn);
@@ -646,7 +614,6 @@ public:
     }
 
     void forwardMagnitude(const float *R__ realIn, float *R__ magOut) {
-        Profiler profiler("D_VDSP::forwardMagnitude [f]");
         if (!m_fspec) initFloat();
         packReal(realIn);
         vDSP_fft_zript(m_fspec, m_fpacked, 1, m_fbuf, m_order, FFT_FORWARD);
@@ -660,7 +627,6 @@ public:
     }
 
     void inverse(const double *R__ realIn, const double *R__ imagIn, double *R__ realOut) {
-        Profiler profiler("D_VDSP::inverse [d]");
         if (!m_dspec) initDouble();
         packComplex(realIn, imagIn);
         vDSP_fft_zriptD(m_dspec, m_dpacked, 1, m_dbuf, m_order, FFT_INVERSE);
@@ -668,7 +634,6 @@ public:
     }
 
     void inverseInterleaved(const double *R__ complexIn, double *R__ realOut) {
-        Profiler profiler("D_VDSP::inverseInterleaved [d]");
         if (!m_dspec) initDouble();
         double *d[2] = { m_dpacked->realp, m_dpacked->imagp };
         v_deinterleave(d, complexIn, 2, m_size/2 + 1);
@@ -677,7 +642,6 @@ public:
     }
 
     void inversePolar(const double *R__ magIn, const double *R__ phaseIn, double *R__ realOut) {
-        Profiler profiler("D_VDSP::inversePolar [d]");
         if (!m_dspec) initDouble();
         const int hs1 = m_size/2+1;
         vvsincos(m_dpacked->imagp, m_dpacked->realp, phaseIn, &hs1);
@@ -691,7 +655,6 @@ public:
     }
 
     void inverseCepstral(const double *R__ magIn, double *R__ cepOut) {
-        Profiler profiler("D_VDSP::inverseCepstral [d]");
         if (!m_dspec) initDouble();
         const int hs1 = m_size/2 + 1;
         v_copy(m_dspare, magIn, hs1);
@@ -701,7 +664,6 @@ public:
     }
     
     void inverse(const float *R__ realIn, const float *R__ imagIn, float *R__ realOut) {
-        Profiler profiler("D_VDSP::inverse [f]");
         if (!m_fspec) initFloat();
         packComplex(realIn, imagIn);
         vDSP_fft_zript(m_fspec, m_fpacked, 1, m_fbuf, m_order, FFT_INVERSE);
@@ -709,7 +671,6 @@ public:
     }
 
     void inverseInterleaved(const float *R__ complexIn, float *R__ realOut) {
-        Profiler profiler("D_VDSP::inverseInterleaved [f]");
         if (!m_fspec) initFloat();
         float *f[2] = { m_fpacked->realp, m_fpacked->imagp };
         v_deinterleave(f, complexIn, 2, m_size/2 + 1);
@@ -718,7 +679,6 @@ public:
     }
 
     void inversePolar(const float *R__ magIn, const float *R__ phaseIn, float *R__ realOut) {
-        Profiler profiler("D_VDSP::inversePolar [f]");
         if (!m_fspec) initFloat();
 
         const int hs1 = m_size/2+1;
@@ -733,7 +693,6 @@ public:
     }
 
     void inverseCepstral(const float *R__ magIn, float *R__ cepOut) {
-        Profiler profiler("D_VDSP::inverseCepstral [f]");
         if (!m_fspec) initFloat();
         const int hs1 = m_size/2 + 1;
         v_copy(m_fspare, magIn, hs1);
@@ -893,14 +852,12 @@ public:
     }
 
     void forward(const double *R__ realIn, double *R__ realOut, double *R__ imagOut) {
-        Profiler profiler("D_MEDIALIB::forward [d]");
         if (!m_dpacked) initDouble();
         mlib_SignalFFT_1_D64C_D64(m_dpacked, realIn, m_order);
         unpackDouble(realOut, imagOut);
     }
 
     void forwardInterleaved(const double *R__ realIn, double *R__ complexOut) {
-        Profiler profiler("D_MEDIALIB::forwardInterleaved [d]");
         if (!m_dpacked) initDouble();
         // mlib FFT gives the whole redundant complex result
         mlib_SignalFFT_1_D64C_D64(m_dpacked, realIn, m_order);
@@ -908,7 +865,6 @@ public:
     }
 
     void forwardPolar(const double *R__ realIn, double *R__ magOut, double *R__ phaseOut) {
-        Profiler profiler("D_MEDIALIB::forwardPolar [d]");
         if (!m_dpacked) initDouble();
         mlib_SignalFFT_1_D64C_D64(m_dpacked, realIn, m_order);
         const int hs = m_size/2;
@@ -924,7 +880,6 @@ public:
     }
 
     void forwardMagnitude(const double *R__ realIn, double *R__ magOut) {
-        Profiler profiler("D_MEDIALIB::forwardMagnitude [d]");
         if (!m_dpacked) initDouble();
         mlib_SignalFFT_1_D64C_D64(m_dpacked, realIn, m_order);
         const int hs = m_size/2;
@@ -939,14 +894,12 @@ public:
     }
 
     void forward(const float *R__ realIn, float *R__ realOut, float *R__ imagOut) {
-        Profiler profiler("D_MEDIALIB::forward [f]");
         if (!m_fpacked) initFloat();
         mlib_SignalFFT_1_F32C_F32(m_fpacked, realIn, m_order);
         unpackFloat(realOut, imagOut);
     }
 
     void forwardInterleaved(const float *R__ realIn, float *R__ complexOut) {
-        Profiler profiler("D_MEDIALIB::forwardInterleaved [f]");
         if (!m_fpacked) initFloat();
         // mlib FFT gives the whole redundant complex result
         mlib_SignalFFT_1_F32C_F32(m_fpacked, realIn, m_order);
@@ -954,7 +907,6 @@ public:
     }
 
     void forwardPolar(const float *R__ realIn, float *R__ magOut, float *R__ phaseOut) {
-        Profiler profiler("D_MEDIALIB::forwardPolar [f]");
         if (!m_fpacked) initFloat();
         mlib_SignalFFT_1_F32C_F32(m_fpacked, realIn, m_order);
         const int hs = m_size/2;
@@ -970,7 +922,6 @@ public:
     }
 
     void forwardMagnitude(const float *R__ realIn, float *R__ magOut) {
-        Profiler profiler("D_MEDIALIB::forwardMagnitude [f]");
         if (!m_fpacked) initFloat();
         mlib_SignalFFT_1_F32C_F32(m_fpacked, realIn, m_order);
         const int hs = m_size/2;
@@ -985,14 +936,12 @@ public:
     }
 
     void inverse(const double *R__ realIn, const double *R__ imagIn, double *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inverse [d]");
         if (!m_dpacked) initDouble();
         packDouble(realIn, imagIn);
         mlib_SignalIFFT_2_D64_D64C(realOut, m_dpacked, m_order);
     }
 
     void inverseInterleaved(const double *R__ complexIn, double *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inverseInterleaved [d]");
         if (!m_dpacked) initDouble();
         v_copy(m_dpacked, complexIn, m_size + 2);
         packDoubleConjugates();
@@ -1000,7 +949,6 @@ public:
     }
 
     void inversePolar(const double *R__ magIn, const double *R__ phaseIn, double *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inversePolar [d]");
         if (!m_dpacked) initDouble();
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -1014,7 +962,6 @@ public:
     }
 
     void inverseCepstral(const double *R__ magIn, double *R__ cepOut) {
-        Profiler profiler("D_MEDIALIB::inverseCepstral [d]");
         if (!m_dpacked) initDouble();
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -1026,14 +973,12 @@ public:
     }
     
     void inverse(const float *R__ realIn, const float *R__ imagIn, float *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inverse [f]");
         if (!m_fpacked) initFloat();
         packFloat(realIn, imagIn);
         mlib_SignalIFFT_2_F32_F32C(realOut, m_fpacked, m_order);
     }
     
     void inverseInterleaved(const float *R__ complexIn, float *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inverseInterleaved [f]");
         if (!m_fpacked) initFloat();
         v_convert(m_fpacked, complexIn, m_size + 2);
         packFloatConjugates();
@@ -1041,7 +986,6 @@ public:
     }
 
     void inversePolar(const float *R__ magIn, const float *R__ phaseIn, float *R__ realOut) {
-        Profiler profiler("D_MEDIALIB::inversePolar [f]");
         if (!m_fpacked) initFloat();
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -1055,7 +999,6 @@ public:
     }
 
     void inverseCepstral(const float *R__ magIn, float *R__ cepOut) {
-        Profiler profiler("D_MEDIALIB::inverseCepstral [f]");
         if (!m_fpacked) initFloat();
         const int hs = m_size/2;
         for (int i = 0; i <= hs; ++i) {
@@ -1295,7 +1238,6 @@ public:
     }
 
     void forward(const double *R__ realIn, double *R__ realOut, double *R__ imagOut) {
-        Profiler profiler("D_OPENMAX::forward [d]");
         if (!m_packed) initDouble();
         packDouble(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1303,7 +1245,6 @@ public:
     }
     
     void forwardInterleaved(const double *R__ realIn, double *R__ complexOut) {
-        Profiler profiler("D_OPENMAX::forwardInterleaved [d]");
         if (!m_packed) initDouble();
         packDouble(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1311,7 +1252,6 @@ public:
     }
 
     void forwardPolar(const double *R__ realIn, double *R__ magOut, double *R__ phaseOut) {
-        Profiler profiler("D_OPENMAX::forwardPolar [d]");
         if (!m_packed) initDouble();
         packDouble(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1326,7 +1266,6 @@ public:
     }
 
     void forwardMagnitude(const double *R__ realIn, double *R__ magOut) {
-        Profiler profiler("D_OPENMAX::forwardMagnitude [d]");
         if (!m_packed) initDouble();
         packDouble(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1341,7 +1280,6 @@ public:
     }
 
     void forward(const float *R__ realIn, float *R__ realOut, float *R__ imagOut) {
-        Profiler profiler("D_OPENMAX::forward [f]");
         if (!m_packed) initFloat();
         packFloat(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1349,7 +1287,6 @@ public:
     }
 
     void forwardInterleaved(const float *R__ realIn, float *R__ complexOut) {
-        Profiler profiler("D_OPENMAX::forwardInterleaved [f]");
         if (!m_packed) initFloat();
         packFloat(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1357,7 +1294,6 @@ public:
     }
 
     void forwardPolar(const float *R__ realIn, float *R__ magOut, float *R__ phaseOut) {
-        Profiler profiler("D_OPENMAX::forwardPolar [f]");
         if (!m_packed) initFloat();
 
         packFloat(realIn);
@@ -1373,7 +1309,6 @@ public:
     }
 
     void forwardMagnitude(const float *R__ realIn, float *R__ magOut) {
-        Profiler profiler("D_OPENMAX::forwardMagnitude [f]");
         if (!m_packed) initFloat();
         packFloat(realIn);
         omxSP_FFTFwd_RToCCS_S32_Sfs(m_buf, m_packed, m_spec, m_order);
@@ -1388,7 +1323,6 @@ public:
     }
 
     void inverse(const double *R__ realIn, const double *R__ imagIn, double *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inverse [d]");
         if (!m_packed) initDouble();
         packDouble(realIn, imagIn);
         omxSP_FFTInv_CCSToR_S32_Sfs(m_packed, m_buf, m_spec, 0);
@@ -1396,7 +1330,6 @@ public:
     }
 
     void inverseInterleaved(const double *R__ complexIn, double *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inverseInterleaved [d]");
         if (!m_packed) initDouble();
         convertDouble(complexIn);
         omxSP_FFTInv_CCSToR_S32_Sfs(m_packed, m_buf, m_spec, 0);
@@ -1404,7 +1337,6 @@ public:
     }
 
     void inversePolar(const double *R__ magIn, const double *R__ phaseIn, double *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inversePolar [d]");
         if (!m_packed) initDouble();
         int index = 0;
         const int hs = m_size/2;
@@ -1420,13 +1352,11 @@ public:
     }
 
     void inverseCepstral(const double *R__ magIn, double *R__ cepOut) {
-        Profiler profiler("D_OPENMAX::inverseCepstral [d]");
         if (!m_packed) initDouble();
         //!!! implement
     }
     
     void inverse(const float *R__ realIn, const float *R__ imagIn, float *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inverse [f]");
         if (!m_packed) initFloat();
         packFloat(realIn, imagIn);
         omxSP_FFTInv_CCSToR_S32_Sfs(m_packed, m_buf, m_spec, 0);
@@ -1434,7 +1364,6 @@ public:
     }
 
     void inverseInterleaved(const float *R__ complexIn, float *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inverse [f]");
         if (!m_packed) initFloat();
         convertFloat(complexIn);
         omxSP_FFTInv_CCSToR_S32_Sfs(m_packed, m_buf, m_spec, 0);
@@ -1442,7 +1371,6 @@ public:
     }
 
     void inversePolar(const float *R__ magIn, const float *R__ phaseIn, float *R__ realOut) {
-        Profiler profiler("D_OPENMAX::inversePolar [f]");
         if (!m_packed) initFloat();
         const int hs = m_size/2;
         v_polar_to_cartesian_interleaved(m_fbuf, magIn, phaseIn, hs+1);
@@ -1452,7 +1380,6 @@ public:
     }
 
     void inverseCepstral(const float *R__ magIn, float *R__ cepOut) {
-        Profiler profiler("D_OPENMAX::inverseCepstral [f]");
         if (!m_packed) initFloat();
         //!!! implement
     }
