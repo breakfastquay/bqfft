@@ -36,7 +36,7 @@
 #ifndef BQFFT_FFT_H
 #define BQFFT_FFT_H
 
-#include "system/sysutils.h"
+#include <bqvec/Restrict.h>
 
 #include <string>
 #include <set>
@@ -76,25 +76,25 @@ public:
     FFT(int size, int debugLevel = 0); // may throw InvalidSize
     ~FFT();
 
-    void forward(const double *R__ realIn, double *R__ realOut, double *R__ imagOut);
-    void forwardInterleaved(const double *R__ realIn, double *R__ complexOut);
-    void forwardPolar(const double *R__ realIn, double *R__ magOut, double *R__ phaseOut);
-    void forwardMagnitude(const double *R__ realIn, double *R__ magOut);
+    void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut);
+    void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut);
+    void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut);
+    void forwardMagnitude(const double *BQ_R__ realIn, double *BQ_R__ magOut);
 
-    void forward(const float *R__ realIn, float *R__ realOut, float *R__ imagOut);
-    void forwardInterleaved(const float *R__ realIn, float *R__ complexOut);
-    void forwardPolar(const float *R__ realIn, float *R__ magOut, float *R__ phaseOut);
-    void forwardMagnitude(const float *R__ realIn, float *R__ magOut);
+    void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut, float *BQ_R__ imagOut);
+    void forwardInterleaved(const float *BQ_R__ realIn, float *BQ_R__ complexOut);
+    void forwardPolar(const float *BQ_R__ realIn, float *BQ_R__ magOut, float *BQ_R__ phaseOut);
+    void forwardMagnitude(const float *BQ_R__ realIn, float *BQ_R__ magOut);
 
-    void inverse(const double *R__ realIn, const double *R__ imagIn, double *R__ realOut);
-    void inverseInterleaved(const double *R__ complexIn, double *R__ realOut);
-    void inversePolar(const double *R__ magIn, const double *R__ phaseIn, double *R__ realOut);
-    void inverseCepstral(const double *R__ magIn, double *R__ cepOut);
+    void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn, double *BQ_R__ realOut);
+    void inverseInterleaved(const double *BQ_R__ complexIn, double *BQ_R__ realOut);
+    void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn, double *BQ_R__ realOut);
+    void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut);
 
-    void inverse(const float *R__ realIn, const float *R__ imagIn, float *R__ realOut);
-    void inverseInterleaved(const float *R__ complexIn, float *R__ realOut);
-    void inversePolar(const float *R__ magIn, const float *R__ phaseIn, float *R__ realOut);
-    void inverseCepstral(const float *R__ magIn, float *R__ cepOut);
+    void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut);
+    void inverseInterleaved(const float *BQ_R__ complexIn, float *BQ_R__ realOut);
+    void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn, float *BQ_R__ realOut);
+    void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut);
 
     // Calling one or both of these is optional -- if neither is
     // called, the first call to a forward or inverse method will call
