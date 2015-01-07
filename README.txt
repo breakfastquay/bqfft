@@ -5,6 +5,8 @@ bqfft
 A small library wrapping various FFT implementations for some common
 audio processing use cases.
 
+Requires the bqvec library.
+
 Copyright 2007-2015 Particular Programs Ltd.
 
 This code originated as part of the Rubber Band Library written by the
