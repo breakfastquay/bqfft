@@ -73,13 +73,13 @@ extern "C" {
 }
 #endif
 
-#ifdef USE_KISSFFT
+#ifdef HAVE_KISSFFT
 #include "kissfft/kiss_fftr.h"
 #endif
 
 #ifndef HAVE_IPP
 #ifndef HAVE_FFTW3
-#ifndef USE_KISSFFT
+#ifndef HAVE_KISSFFT
 #ifndef USE_BUILTIN_FFT
 #ifndef HAVE_VDSP
 #ifndef HAVE_MEDIALIB
@@ -1388,6 +1388,7 @@ public:
     void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut) {
         if (!m_packed) initDouble();
         //!!! implement
+#warning OpenMAX implementation lacks cepstral transforms
     }
     
     void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut) {
@@ -1416,6 +1417,7 @@ public:
     void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut) {
         if (!m_packed) initFloat();
         //!!! implement
+#warning OpenMAX implementation lacks cepstral transforms
     }
 
 private:
@@ -2356,7 +2358,7 @@ private:
 
 #endif /* HAVE_SFFT */
 
-#ifdef USE_KISSFFT
+#ifdef HAVE_KISSFFT
 
 class D_KISSFFT : public FFTImpl
 {
@@ -2640,7 +2642,7 @@ private:
     kiss_fft_cpx *m_fpacked;
 };
 
-#endif /* USE_KISSFFT */
+#endif /* HAVE_KISSFFT */
 
 #ifdef USE_BUILTIN_FFT
 
@@ -3004,7 +3006,7 @@ FFT::getImplementations()
 #ifdef HAVE_FFTW3
     impls.insert("fftw");
 #endif
-#ifdef USE_KISSFFT
+#ifdef HAVE_KISSFFT
     impls.insert("kissfft");
 #endif
 #ifdef HAVE_VDSP
@@ -3086,7 +3088,7 @@ FFT::FFT(int size, int debugLevel) :
         d = new FFTs::D_FFTW(size);
 #endif
     } else if (impl == "kissfft") {        
-#ifdef USE_KISSFFT
+#ifdef HAVE_KISSFFT
         d = new FFTs::D_KISSFFT(size);
 #endif
     } else if (impl == "vdsp") {
@@ -3339,7 +3341,7 @@ FFT::tune()
         candidates[d] = 1;
 #endif
 
-#ifdef USE_KISSFFT
+#ifdef HAVE_KISSFFT
         os << "Constructing new KISSFFT object for size " << size << "..." << std::endl;
         d = new FFTs::D_KISSFFT(size);
         d->initFloat();
