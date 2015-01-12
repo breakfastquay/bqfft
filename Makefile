@@ -19,10 +19,10 @@
 # 
 # Add any relevant -I flags for include paths as well.
 #
-# Note that you must supply the same flags when including bqvec
+# Note that you must supply the same flags when including bqfft
 # headers later as you are using now when compiling the library. (You
-# may find it simplest to just add the bqvec source files to your
-# application's build system and not build a bqvec library at all.)
+# may find it simplest to just add the bqfft source files to your
+# application's build system and not build a bqfft library at all.)
 
 FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
@@ -48,16 +48,16 @@ FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 # The default is to use _aligned_malloc when building with Visual C++,
 # system malloc when building on OS/X, and posix_memalign otherwise.
 #
-# Note that you must supply the same flags when including bqvec
+# Note that you must supply the same flags when including bqfft
 # headers later as you are using now when compiling the library. (You
-# may find it simplest to just add the bqvec source files to your
-# application's build system and not build a bqvec library at all.)
+# may find it simplest to just add the bqfft source files to your
+# application's build system and not build a bqfft library at all.)
 
 ALLOCATOR_DEFINES := 
 
 
 SRC_DIR	:= src
-HEADER_DIR := bqvec
+HEADER_DIR := bqfft
 
 SOURCES	:= $(wildcard $(SRC_DIR)/*.cpp)
 HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
@@ -67,7 +67,7 @@ OBJECTS	:= $(OBJECTS:.c=.o)
 
 CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec
 
-LIBRARY	:= libbqvec.a
+LIBRARY	:= libbqfft.a
 
 all:	$(LIBRARY)
 
@@ -86,10 +86,4 @@ depend:
 
 # DO NOT DELETE
 
-src/VectorOpsComplex.o: bqvec/VectorOpsComplex.h bqvec/VectorOps.h
-src/VectorOpsComplex.o: bqvec/Restrict.h bqvec/ComplexTypes.h
-src/Allocators.o: bqvec/Allocators.h bqvec/VectorOps.h bqvec/Restrict.h
-bqvec/VectorOpsComplex.o: bqvec/VectorOps.h bqvec/Restrict.h
-bqvec/VectorOpsComplex.o: bqvec/ComplexTypes.h
-bqvec/VectorOps.o: bqvec/Restrict.h
-bqvec/Allocators.o: bqvec/VectorOps.h bqvec/Restrict.h
+src/FFT.o: bqfft/FFT.h

@@ -1503,13 +1503,12 @@ public:
     D_FFTW(int size) :
         m_fplanf(0), m_dplanf(0), m_size(size)
     {
+        initMutex();
     }
 
     ~D_FFTW() {
         if (m_fplanf) {
-#ifndef NO_THREADING
-            m_commonMutex.lock();
-#endif
+            lock();
             bool save = false;
             if (m_extantf > 0 && --m_extantf == 0) save = true;
 #ifndef FFTW_DOUBLE_ONLY
@@ -1519,14 +1518,10 @@ public:
             fftwf_destroy_plan(m_fplani);
             fftwf_free(m_fbuf);
             fftwf_free(m_fpacked);
-#ifndef NO_THREADING
-            m_commonMutex.unlock();
-#endif
+            unlock();
         }
         if (m_dplanf) {
-#ifndef NO_THREADING
-            m_commonMutex.lock();
-#endif
+            lock();
             bool save = false;
             if (m_extantd > 0 && --m_extantd == 0) save = true;
 #ifndef FFTW_SINGLE_ONLY
@@ -1536,10 +1531,9 @@ public:
             fftw_destroy_plan(m_dplani);
             fftw_free(m_dbuf);
             fftw_free(m_dpacked);
-#ifndef NO_THREADING
-            m_commonMutex.unlock();
-#endif
+            unlock();
         }
+        destroyMutex();
     }
 
     FFT::Precisions
@@ -1558,9 +1552,7 @@ public:
     void initFloat() {
         if (m_fplanf) return;
         bool load = false;
-#ifndef NO_THREADING
-        m_commonMutex.lock();
-#endif
+        lock();
         if (m_extantf++ == 0) load = true;
 #ifdef FFTW_DOUBLE_ONLY
         if (load) loadWisdom('d');
@@ -1574,17 +1566,13 @@ public:
             (m_size, m_fbuf, m_fpacked, FFTW_MEASURE);
         m_fplani = fftwf_plan_dft_c2r_1d
             (m_size, m_fpacked, m_fbuf, FFTW_MEASURE);
-#ifndef NO_THREADING
-        m_commonMutex.unlock();
-#endif
+        unlock();
     }
 
     void initDouble() {
         if (m_dplanf) return;
         bool load = false;
-#ifndef NO_THREADING
-        m_commonMutex.lock();
-#endif
+        lock();
         if (m_extantd++ == 0) load = true;
 #ifdef FFTW_SINGLE_ONLY
         if (load) loadWisdom('f');
@@ -1598,9 +1586,7 @@ public:
             (m_size, m_dbuf, m_dpacked, FFTW_MEASURE);
         m_dplani = fftw_plan_dft_c2r_1d
             (m_size, m_dpacked, m_dbuf, FFTW_MEASURE);
-#ifndef NO_THREADING
-        m_commonMutex.unlock();
-#endif
+        unlock();
     }
 
     void loadWisdom(char type) { wisdom(false, type); }
@@ -1997,8 +1983,25 @@ private:
     const int m_size;
     static int m_extantf;
     static int m_extantd;
-#ifndef NO_THREADING
-    static Mutex m_commonMutex;
+#ifdef NO_THREADING
+    void initMutex() {}
+    void destroyMutex() {}
+    void lock() {}
+    void unlock() {}
+#else
+#ifdef _WIN32
+    static HANDLE m_commonMutex;
+    void initMutex() { m_commonMutex = CreateMutex(NULL, FALSE, NULL); }
+    void destroyMutex() { CloseHandle(m_commonMutex); }
+    void lock() { WaitForSingleObject(m_commonMutex, INFINITE); }
+    void unlock() { ReleaseMutex(m_commonMutex); }
+#else
+    static pthread_mutex_t m_commonMutex;
+    void initMutex() { pthread_mutex_init(&m_commonMutex, 0); }
+    void destroyMutex() { pthread_mutex_destroy(&m_commonMutex); }
+    void lock() { pthread_mutex_lock(&m_commonMutex); }
+    void unlock() { pthread_mutex_unlock(&m_commonMutex); }
+#endif
 #endif
 };
 
@@ -2009,8 +2012,11 @@ int
 D_FFTW::m_extantd = 0;
 
 #ifndef NO_THREADING
-Mutex
-D_FFTW::m_commonMutex;
+#ifdef _WIN32
+HANDLE D_FFTW::m_commonMutex;
+#else
+pthread_mutex_t D_FFTW::m_commonMutex;
+#endif
 #endif
 
 #endif /* HAVE_FFTW3 */

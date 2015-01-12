@@ -1,0 +1,13 @@
+syntax: glob
+*~
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.bak
+test-fft
+moc_*
+test/Makefile
+
