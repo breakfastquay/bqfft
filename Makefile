@@ -1,14 +1,21 @@
 
-# Add to VECTOR_DEFINES the relevant options for your desired
-# third-party library support.
+# Add to FFT_DEFINES the relevant options for your desired third-party
+# library support.
 #
 # Available options are
 #
-#  -DHAVE_IPP    Intel's Integrated Performance Primitives are available
-#  -DHAVE_VDSP   Apple's Accelerate framework is available
+#  -DHAVE_IPP         Intel's Integrated Performance Primitives are available
+#  -DHAVE_VDSP        Apple's Accelerate framework is available
+#  -DHAVE_FFTW3       The FFTW library is available
+#  -DHAVE_KISSFFT     The KissFFT library is available
+#  -DHAVE_MEDIALIB    The Medialib library (from Sun) is available
+#  -DHAVE_OPENMAX     The OpenMAX signal processing library is available
+#  -DUSE_BUILTIN_FFT  Compile the built-in FFT code (which is very slow)
 #
-# These are optional (they affect performance, not function) and you
-# may define more than one of them.
+# You may define more than one of these. If you define
+# USE_BUILTIN_FFT, the code will be compiled in but will only be used
+# if no other option is available. The default, if no flags are
+# supplied, is for the code to refuse to compile.
 # 
 # Add any relevant -I flags for include paths as well.
 #
@@ -17,7 +24,7 @@
 # may find it simplest to just add the bqvec source files to your
 # application's build system and not build a bqvec library at all.)
 
-VECTOR_DEFINES	:= 
+FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
 
 # Add to ALLOCATOR_DEFINES options relating to aligned malloc.
@@ -58,7 +65,7 @@ HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 OBJECTS	:= $(SOURCES:.cpp=.o)
 OBJECTS	:= $(OBJECTS:.c=.o)
 
-CXXFLAGS := $(VECTOR_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec
+CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec
 
 LIBRARY	:= libbqvec.a
 
