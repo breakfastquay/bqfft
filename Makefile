@@ -24,6 +24,8 @@
 # may find it simplest to just add the bqfft source files to your
 # application's build system and not build a bqfft library at all.)
 
+# WARNING! The default option here is VERY SLOW! Read above for better
+# alternatives!
 FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
 
