@@ -46,8 +46,8 @@ namespace breakfastquay {
 class FFTImpl;
 
 /**
- * Provide the basic FFT computations we need, using one of a set of
- * candidate FFT implementations (depending on compile flags).
+ * Provide basic FFT computations using one of a set of candidate FFT
+ * implementations (depending on compile flags).
  *
  * Implements real->complex FFTs of power-of-two sizes only.  Note
  * that only the first half of the output signal is returned (the
