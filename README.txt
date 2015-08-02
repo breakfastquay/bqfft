@@ -7,6 +7,8 @@ audio processing use cases.
 
 Requires the bqvec library.
 
+C++ standard required: C++98 (does not use C++11)
+
 Copyright 2007-2015 Particular Programs Ltd.
 
 This code originated as part of the Rubber Band Library written by the
