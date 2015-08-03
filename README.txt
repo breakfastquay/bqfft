@@ -3,7 +3,8 @@ bqfft
 =====
 
 A small library wrapping various FFT implementations for some common
-audio processing use cases.
+audio processing use cases. Note this is not a general FFT interface,
+as it handles only power-of-two FFT sizes and real inputs.
 
 Requires the bqvec library.
 
