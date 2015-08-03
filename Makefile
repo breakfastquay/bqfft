@@ -57,7 +57,6 @@ FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
 ALLOCATOR_DEFINES := 
 
-
 SRC_DIR	:= src
 HEADER_DIR := bqfft
 
@@ -67,7 +66,7 @@ HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 OBJECTS	:= $(SOURCES:.cpp=.o)
 OBJECTS	:= $(OBJECTS:.c=.o)
 
-CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec
+CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec -fpic
 
 LIBRARY	:= libbqfft.a
 
