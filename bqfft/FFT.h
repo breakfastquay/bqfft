@@ -57,7 +57,7 @@ class FFTImpl;
  * The "interleaved" functions use the format sometimes called CCS --
  * size/2+1 real+imaginary pairs.  So, the array elements at indices 1
  * and size+1 will always be zero (since the signal is real).
- * 
+ *
  * All pointer arguments must point to valid data. A NullArgument
  * exception is thrown if any argument is NULL.
  *
@@ -133,6 +133,10 @@ protected:
     FFTImpl *d;
     static std::string m_implementation;
     static void pickDefaultImplementation();
+
+private:
+    FFT(const FFT &); // not provided
+    FFT &operator=(const FFT &); // not provided
 };
 
 }
