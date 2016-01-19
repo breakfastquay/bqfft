@@ -1503,7 +1503,6 @@ public:
     D_FFTW(int size) :
         m_fplanf(0), m_dplanf(0), m_size(size)
     {
-        initMutex();
     }
 
     ~D_FFTW() {
@@ -1533,7 +1532,11 @@ public:
             fftw_free(m_dpacked);
             unlock();
         }
-        destroyMutex();
+        lock();
+        if (m_extantf <= 0 && m_extantd <= 0) {
+            fftw_cleanup();
+        }
+        unlock();
     }
 
     FFT::Precisions
@@ -1984,21 +1987,16 @@ private:
     static int m_extantf;
     static int m_extantd;
 #ifdef NO_THREADING
-    void initMutex() {}
-    void destroyMutex() {}
     void lock() {}
     void unlock() {}
 #else
 #ifdef _WIN32
     static HANDLE m_commonMutex;
-    void initMutex() { m_commonMutex = CreateMutex(NULL, FALSE, NULL); }
-    void destroyMutex() { CloseHandle(m_commonMutex); }
     void lock() { WaitForSingleObject(m_commonMutex, INFINITE); }
     void unlock() { ReleaseMutex(m_commonMutex); }
 #else
     static pthread_mutex_t m_commonMutex;
-    void initMutex() { pthread_mutex_init(&m_commonMutex, 0); }
-    void destroyMutex() { pthread_mutex_destroy(&m_commonMutex); }
+    static bool m_haveMutex;
     void lock() { pthread_mutex_lock(&m_commonMutex); }
     void unlock() { pthread_mutex_unlock(&m_commonMutex); }
 #endif
@@ -2013,9 +2011,9 @@ D_FFTW::m_extantd = 0;
 
 #ifndef NO_THREADING
 #ifdef _WIN32
-HANDLE D_FFTW::m_commonMutex;
+HANDLE D_FFTW::m_commonMutex = CreateMutex(NULL, FALSE, NULL);
 #else
-pthread_mutex_t D_FFTW::m_commonMutex;
+pthread_mutex_t D_FFTW::m_commonMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 #endif
 
