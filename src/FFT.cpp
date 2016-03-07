@@ -117,6 +117,8 @@ public:
 
     virtual FFT::Precisions getSupportedPrecisions() const = 0;
 
+    virtual int getSize() const = 0;
+    
     virtual void initFloat() = 0;
     virtual void initDouble() = 0;
 
@@ -174,6 +176,10 @@ public:
         }
     }
 
+    int getSize() const {
+        return m_size;
+    }
+    
     FFT::Precisions
     getSupportedPrecisions() const {
         return FFT::SinglePrecision | FFT::DoublePrecision;
@@ -441,6 +447,10 @@ public:
             deallocate(m_dpacked->imagp);
             delete m_dpacked;
         }
+    }
+
+    int getSize() const {
+        return m_size;
     }
 
     FFT::Precisions
@@ -778,6 +788,10 @@ public:
         }
     }
 
+    int getSize() const {
+        return m_size;
+    }
+
     FFT::Precisions
     getSupportedPrecisions() const {
         return FFT::SinglePrecision | FFT::DoublePrecision;
@@ -1100,6 +1114,10 @@ public:
             deallocate(m_fbuf);
             deallocate(m_spec);
         }
+    }
+
+    int getSize() const {
+        return m_size;
     }
 
     FFT::Precisions
@@ -1537,6 +1555,10 @@ public:
             fftw_cleanup();
         }
         unlock();
+    }
+
+    int getSize() const {
+        return m_size;
     }
 
     FFT::Precisions
@@ -2091,6 +2113,10 @@ public:
         }
     }
 
+    int getSize() const {
+        return m_size;
+    }
+
     FFT::Precisions
     getSupportedPrecisions() const {
 #ifdef SFFT_SINGLE_ONLY
@@ -2395,6 +2421,10 @@ public:
         delete[] m_fpacked;
     }
 
+    int getSize() const {
+        return m_size;
+    }
+
     FFT::Precisions
     getSupportedPrecisions() const {
         return FFT::SinglePrecision;
@@ -2691,6 +2721,10 @@ public:
         delete[] m_b;
         delete[] m_c;
         delete[] m_d;
+    }
+
+    int getSize() const {
+        return m_size;
     }
 
     FFT::Precisions
@@ -3296,6 +3330,12 @@ FFT::initDouble()
     d->initDouble();
 }
 
+int
+FFT::getSize() const
+{
+    return d->getSize();
+}
+
 FFT::Precisions
 FFT::getSupportedPrecisions() const
 {
@@ -3316,6 +3356,7 @@ FFT::tune()
 
     sizes.push_back(512);
     sizes.push_back(1024);
+    sizes.push_back(2048);
     sizes.push_back(4096);
     
     for (unsigned int si = 0; si < sizes.size(); ++si) {

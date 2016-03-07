@@ -76,6 +76,8 @@ public:
     FFT(int size, int debugLevel = 0); // may throw InvalidSize
     ~FFT();
 
+    int getSize() const;
+    
     void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut);
     void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut);
     void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut);
