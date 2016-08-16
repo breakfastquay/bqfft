@@ -2415,7 +2415,6 @@ public:
     ~D_KISSFFT() {
         kiss_fftr_free(m_fplanf);
         kiss_fftr_free(m_fplani);
-        kiss_fft_cleanup();
 
         delete[] m_fbuf;
         delete[] m_fpacked;
