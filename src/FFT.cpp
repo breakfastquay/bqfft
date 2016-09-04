@@ -41,6 +41,15 @@
 #include <bqvec/VectorOps.h>
 #include <bqvec/VectorOpsComplex.h>
 
+// Define USE_FFTW_WISDOM if you are defining HAVE_FFTW3 and you want
+// to use FFTW_MEASURE mode with persistent wisdom files. This will
+// make things much slower on first use if no suitable wisdom has been
+// saved, but may be faster during subsequent use.
+//#define USE_FFTW_WISDOM 1
+
+// Define FFT_MEASUREMENT to include timing measurement code callable
+// via the static method FFT::tune(). Must be defined when the header
+// is included as well.
 //#define FFT_MEASUREMENT 1
 
 #ifdef FFT_MEASUREMENT
@@ -1528,8 +1537,10 @@ public:
             lock();
             bool save = false;
             if (m_extantf > 0 && --m_extantf == 0) save = true;
+#ifdef USE_FFTW_WISDOM
 #ifndef FFTW_DOUBLE_ONLY
             if (save) saveWisdom('f');
+#endif
 #endif
             fftwf_destroy_plan(m_fplanf);
             fftwf_destroy_plan(m_fplani);
@@ -1541,8 +1552,10 @@ public:
             lock();
             bool save = false;
             if (m_extantd > 0 && --m_extantd == 0) save = true;
+#ifdef USE_FFTW_WISDOM
 #ifndef FFTW_SINGLE_ONLY
             if (save) saveWisdom('d');
+#endif
 #endif
             fftw_destroy_plan(m_dplanf);
             fftw_destroy_plan(m_dplani);
@@ -1579,18 +1592,27 @@ public:
         bool load = false;
         lock();
         if (m_extantf++ == 0) load = true;
+#ifdef USE_FFTW_WISDOM
 #ifdef FFTW_DOUBLE_ONLY
         if (load) loadWisdom('d');
 #else
         if (load) loadWisdom('f');
 #endif
+#endif
         m_fbuf = (fft_float_type *)fftw_malloc(m_size * sizeof(fft_float_type));
         m_fpacked = (fftwf_complex *)fftw_malloc
             ((m_size/2 + 1) * sizeof(fftwf_complex));
+#ifdef USE_FFTW_WISDOM
         m_fplanf = fftwf_plan_dft_r2c_1d
             (m_size, m_fbuf, m_fpacked, FFTW_MEASURE);
         m_fplani = fftwf_plan_dft_c2r_1d
             (m_size, m_fpacked, m_fbuf, FFTW_MEASURE);
+#else
+        m_fplanf = fftwf_plan_dft_r2c_1d
+            (m_size, m_fbuf, m_fpacked, FFTW_ESTIMATE);
+        m_fplani = fftwf_plan_dft_c2r_1d
+            (m_size, m_fpacked, m_fbuf, FFTW_ESTIMATE);
+#endif
         unlock();
     }
 
@@ -1599,18 +1621,27 @@ public:
         bool load = false;
         lock();
         if (m_extantd++ == 0) load = true;
+#ifdef USE_FFTW_WISDOM
 #ifdef FFTW_SINGLE_ONLY
         if (load) loadWisdom('f');
 #else
         if (load) loadWisdom('d');
 #endif
+#endif
         m_dbuf = (fft_double_type *)fftw_malloc(m_size * sizeof(fft_double_type));
         m_dpacked = (fftw_complex *)fftw_malloc
             ((m_size/2 + 1) * sizeof(fftw_complex));
+#ifdef USE_FFTW_WISDOM
         m_dplanf = fftw_plan_dft_r2c_1d
             (m_size, m_dbuf, m_dpacked, FFTW_MEASURE);
         m_dplani = fftw_plan_dft_c2r_1d
             (m_size, m_dpacked, m_dbuf, FFTW_MEASURE);
+#else
+        m_dplanf = fftw_plan_dft_r2c_1d
+            (m_size, m_dbuf, m_dpacked, FFTW_ESTIMATE);
+        m_dplani = fftw_plan_dft_c2r_1d
+            (m_size, m_dpacked, m_dbuf, FFTW_ESTIMATE);
+#endif
         unlock();
     }
 
