@@ -1537,6 +1537,7 @@ public:
             lock();
             bool save = false;
             if (m_extantf > 0 && --m_extantf == 0) save = true;
+            (void)save; // avoid compiler warning
 #ifdef USE_FFTW_WISDOM
 #ifndef FFTW_DOUBLE_ONLY
             if (save) saveWisdom('f');
@@ -1552,6 +1553,7 @@ public:
             lock();
             bool save = false;
             if (m_extantd > 0 && --m_extantd == 0) save = true;
+            (void)save; // avoid compiler warning
 #ifdef USE_FFTW_WISDOM
 #ifndef FFTW_SINGLE_ONLY
             if (save) saveWisdom('d');
@@ -1592,6 +1594,7 @@ public:
         bool load = false;
         lock();
         if (m_extantf++ == 0) load = true;
+        (void)load; // avoid compiler warning
 #ifdef USE_FFTW_WISDOM
 #ifdef FFTW_DOUBLE_ONLY
         if (load) loadWisdom('d');
@@ -1621,6 +1624,7 @@ public:
         bool load = false;
         lock();
         if (m_extantd++ == 0) load = true;
+        (void)load; // avoid compiler warning
 #ifdef USE_FFTW_WISDOM
 #ifdef FFTW_SINGLE_ONLY
         if (load) loadWisdom('f');
