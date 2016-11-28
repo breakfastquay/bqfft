@@ -117,6 +117,10 @@ extern "C" {
 #endif
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace breakfastquay {
 
 class FFTImpl
