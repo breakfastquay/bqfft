@@ -21,6 +21,11 @@ int main(int argc, char *argv[])
 	return 1;
     } else {
         std::cerr << "All tests passed" << std::endl;
+
+#ifdef FFT_MEASUREMENT
+        std::cerr << "Running timings..." << std::endl;
+        std::cerr << breakfastquay::FFT::tune() << std::endl;
+#endif
         return 0;
     }
 }

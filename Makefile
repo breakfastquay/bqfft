@@ -28,6 +28,11 @@
 # alternatives!
 FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
+# Add any related includes and libraries here
+#
+THIRD_PARTY_INCLUDES	:=                   # e.g. -I/opt/intel/ipp/include
+THIRD_PARTY_LIBS	:=                   # e.g. -L/opt/intel/ipp/lib/intel64_lin -Wl,-Bstatic -lipps -lippvm -lippcore -Wl,-Bdynamic
+
 
 # Add to ALLOCATOR_DEFINES options relating to aligned malloc.
 #
@@ -55,7 +60,8 @@ FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 # may find it simplest to just add the bqfft source files to your
 # application's build system and not build a bqfft library at all.)
 
-ALLOCATOR_DEFINES := 
+ALLOCATOR_DEFINES := -DHAVE_POSIX_MEMALIGN
+
 
 SRC_DIR	:= src
 HEADER_DIR := bqfft
@@ -66,7 +72,7 @@ HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 OBJECTS	:= $(SOURCES:.cpp=.o)
 OBJECTS	:= $(OBJECTS:.c=.o)
 
-CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. -I../bqvec -fpic
+CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. $(THIRD_PARTY_INCLUDES) -I../bqvec -fpic
 
 LIBRARY	:= libbqfft.a
 

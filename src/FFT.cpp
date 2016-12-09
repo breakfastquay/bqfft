@@ -57,6 +57,7 @@
 #endif
 
 #ifdef HAVE_IPP
+#include <ippversion.h>
 #include <ipps.h>
 #endif
 
@@ -176,13 +177,21 @@ public:
 
     ~D_IPP() {
         if (m_fspec) {
+#if (IPP_VERSION_MAJOR >= 9)
+            ippsFree(m_fspecbuf);
+#else
             ippsFFTFree_R_32f(m_fspec);
+#endif
             ippsFree(m_fbuf);
             ippsFree(m_fpacked);
             ippsFree(m_fspare);
         }
         if (m_dspec) {
+#if (IPP_VERSION_MAJOR >= 9)
+            ippsFree(m_dspecbuf);
+#else
             ippsFFTFree_R_64f(m_dspec);
+#endif
             ippsFree(m_dbuf);
             ippsFree(m_dpacked);
             ippsFree(m_dspare);
@@ -202,6 +211,20 @@ public:
 
     void initFloat() {
         if (m_fspec) return;
+#if (IPP_VERSION_MAJOR >= 9)
+        int specSize, specBufferSize, bufferSize;
+        ippsFFTGetSize_R_32f(m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
+                             &specSize, &specBufferSize, &bufferSize);
+        m_fspecbuf = ippsMalloc_8u(specSize);
+        Ipp8u *tmp = ippsMalloc_8u(specBufferSize);
+        m_fbuf = ippsMalloc_8u(bufferSize);
+        m_fpacked = ippsMalloc_32f(m_size + 2);
+        m_fspare = ippsMalloc_32f(m_size / 2 + 1);
+        ippsFFTInit_R_32f(&m_fspec,
+                          m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
+                          m_fspecbuf, tmp);
+        ippsFree(tmp);
+#else
         int specSize, specBufferSize, bufferSize;
         ippsFFTGetSize_R_32f(m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
                              &specSize, &specBufferSize, &bufferSize);
@@ -210,10 +233,25 @@ public:
         m_fspare = ippsMalloc_32f(m_size / 2 + 1);
         ippsFFTInitAlloc_R_32f(&m_fspec, m_order, IPP_FFT_NODIV_BY_ANY, 
                                ippAlgHintFast);
+#endif
     }
 
     void initDouble() {
         if (m_dspec) return;
+#if (IPP_VERSION_MAJOR >= 9)
+        int specSize, specBufferSize, bufferSize;
+        ippsFFTGetSize_R_64f(m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
+                             &specSize, &specBufferSize, &bufferSize);
+        m_dspecbuf = ippsMalloc_8u(specSize);
+        Ipp8u *tmp = ippsMalloc_8u(specBufferSize);
+        m_dbuf = ippsMalloc_8u(bufferSize);
+        m_dpacked = ippsMalloc_64f(m_size + 2);
+        m_dspare = ippsMalloc_64f(m_size / 2 + 1);
+        ippsFFTInit_R_64f(&m_dspec,
+                          m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
+                          m_dspecbuf, tmp);
+        ippsFree(tmp);
+#else
         int specSize, specBufferSize, bufferSize;
         ippsFFTGetSize_R_64f(m_order, IPP_FFT_NODIV_BY_ANY, ippAlgHintFast,
                              &specSize, &specBufferSize, &bufferSize);
@@ -222,6 +260,7 @@ public:
         m_dspare = ippsMalloc_64f(m_size / 2 + 1);
         ippsFFTInitAlloc_R_64f(&m_dspec, m_order, IPP_FFT_NODIV_BY_ANY, 
                                ippAlgHintFast);
+#endif
     }
 
     void packFloat(const float *BQ_R__ re, const float *BQ_R__ im) {
@@ -409,6 +448,8 @@ private:
     int m_order;
     IppsFFTSpec_R_32f *m_fspec;
     IppsFFTSpec_R_64f *m_dspec;
+    Ipp8u *m_fspecbuf;
+    Ipp8u *m_dspecbuf;
     Ipp8u *m_fbuf;
     Ipp8u *m_dbuf;
     float *m_fpacked;
@@ -3409,7 +3450,7 @@ FFT::tune()
         FFTImpl *d;
         
 #ifdef HAVE_IPP
-        std::cerr << "Constructing new IPP FFT object for size " << size << "..." << std::endl;
+        os << "Constructing new IPP FFT object for size " << size << "..." << std::endl;
         d = new FFTs::D_IPP(size);
         d->initFloat();
         d->initDouble();
@@ -3449,7 +3490,7 @@ FFT::tune()
 #endif
         
 #ifdef HAVE_MEDIALIB
-        std::cerr << "Constructing new MediaLib FFT object for size " << size << "..." << std::endl;
+        os << "Constructing new MediaLib FFT object for size " << size << "..." << std::endl;
         d = new FFTs::D_MEDIALIB(size);
         d->initFloat();
         d->initDouble();
