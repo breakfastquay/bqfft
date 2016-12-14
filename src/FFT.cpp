@@ -571,8 +571,8 @@ public:
         // vDSP forward FFTs are scaled 2x (for some reason)
         const int hs1 = m_size/2 + 1;
         for (int i = 0; i < hs1; ++i) {
-            cplx[i*2] = m_fpacked->realp[i] / 2.f;
-            cplx[i*2+1] = m_fpacked->imagp[i] / 2.f;
+            cplx[i*2] = m_fpacked->realp[i] * 0.5f;
+            cplx[i*2+1] = m_fpacked->imagp[i] * 0.5f;
         }
     }
 
@@ -605,8 +605,8 @@ public:
         // vDSP forward FFTs are scaled 2x (for some reason)
         const int hs1 = m_size/2 + 1;
         for (int i = 0; i < hs1; ++i) {
-            cplx[i*2] = m_dpacked->realp[i] / 2.0;
-            cplx[i*2+1] = m_dpacked->imagp[i] / 2.0;
+            cplx[i*2] = m_dpacked->realp[i] * 0.5;
+            cplx[i*2+1] = m_dpacked->imagp[i] * 0.5;
         }
     }
 
@@ -663,8 +663,8 @@ public:
         vDSP_fft_zriptD(m_dspec, m_dpacked, 1, m_dbuf, m_order, FFT_FORWARD);
         ddenyq();
         // vDSP forward FFTs are scaled 2x (for some reason)
-        for (int i = 0; i < hs1; ++i) m_dpacked->realp[i] /= 2.0;
-        for (int i = 0; i < hs1; ++i) m_dpacked->imagp[i] /= 2.0;
+        for (int i = 0; i < hs1; ++i) m_dpacked->realp[i] *= 0.5;
+        for (int i = 0; i < hs1; ++i) m_dpacked->imagp[i] *= 0.5;
         v_cartesian_to_polar(magOut, phaseOut,
                              m_dpacked->realp, m_dpacked->imagp, hs1);
     }
@@ -705,8 +705,8 @@ public:
         vDSP_fft_zript(m_fspec, m_fpacked, 1, m_fbuf, m_order, FFT_FORWARD);
         fdenyq();
         // vDSP forward FFTs are scaled 2x (for some reason)
-        for (int i = 0; i < hs1; ++i) m_fpacked->realp[i] /= 2.f;
-        for (int i = 0; i < hs1; ++i) m_fpacked->imagp[i] /= 2.f;
+        for (int i = 0; i < hs1; ++i) m_fpacked->realp[i] *= 0.5f;
+        for (int i = 0; i < hs1; ++i) m_fpacked->imagp[i] *= 0.5f;
         v_cartesian_to_polar(magOut, phaseOut,
                              m_fpacked->realp, m_fpacked->imagp, hs1);
     }
@@ -2533,181 +2533,103 @@ public:
     }        
 
     void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut) {
-
         v_convert(m_fbuf, realIn, m_size);
         kiss_fftr(m_fplanf, m_fbuf, m_fpacked);
         unpackDouble(realOut, imagOut);
     }
 
     void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut) {
-
         v_convert(m_fbuf, realIn, m_size);
         kiss_fftr(m_fplanf, m_fbuf, m_fpacked);
         v_convert(complexOut, (float *)m_fpacked, m_size + 2);
     }
 
     void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
-
-        for (int i = 0; i < m_size; ++i) {
-            m_fbuf[i] = float(realIn[i]);
-        }
-
+        v_convert(m_fbuf, realIn, m_size);
         kiss_fftr(m_fplanf, m_fbuf, m_fpacked);
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(double(m_fpacked[i].r) * double(m_fpacked[i].r) +
-                             double(m_fpacked[i].i) * double(m_fpacked[i].i));
-        }
-
-        for (int i = 0; i <= hs; ++i) {
-            phaseOut[i] = atan2(double(m_fpacked[i].i), double(m_fpacked[i].r));
-        }
+        v_cartesian_interleaved_to_polar
+            (magOut, phaseOut, (float *)m_fpacked, m_size/2+1);
     }
 
     void forwardMagnitude(const double *BQ_R__ realIn, double *BQ_R__ magOut) {
-
-        for (int i = 0; i < m_size; ++i) {
-            m_fbuf[i] = float(realIn[i]);
-        }
-
+        v_convert(m_fbuf, realIn, m_size);
         kiss_fftr(m_fplanf, m_fbuf, m_fpacked);
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(double(m_fpacked[i].r) * double(m_fpacked[i].r) +
-                             double(m_fpacked[i].i) * double(m_fpacked[i].i));
-        }
+        v_cartesian_interleaved_to_magnitudes
+            (magOut, (float *)m_fpacked, m_size/2+1);
     }
 
     void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut, float *BQ_R__ imagOut) {
-
         kiss_fftr(m_fplanf, realIn, m_fpacked);
         unpackFloat(realOut, imagOut);
     }
 
     void forwardInterleaved(const float *BQ_R__ realIn, float *BQ_R__ complexOut) {
-
         kiss_fftr(m_fplanf, realIn, (kiss_fft_cpx *)complexOut);
     }
 
     void forwardPolar(const float *BQ_R__ realIn, float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
-
         kiss_fftr(m_fplanf, realIn, m_fpacked);
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrtf(m_fpacked[i].r * m_fpacked[i].r +
-                              m_fpacked[i].i * m_fpacked[i].i);
-        }
-
-        for (int i = 0; i <= hs; ++i) {
-            phaseOut[i] = atan2f(m_fpacked[i].i, m_fpacked[i].r);
-        }
+        v_cartesian_interleaved_to_polar
+            (magOut, phaseOut, (float *)m_fpacked, m_size/2+1);
     }
 
     void forwardMagnitude(const float *BQ_R__ realIn, float *BQ_R__ magOut) {
-
         kiss_fftr(m_fplanf, realIn, m_fpacked);
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrtf(m_fpacked[i].r * m_fpacked[i].r +
-                              m_fpacked[i].i * m_fpacked[i].i);
-        }
+        v_cartesian_interleaved_to_magnitudes
+            (magOut, (float *)m_fpacked, m_size/2+1);
     }
 
     void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn, double *BQ_R__ realOut) {
-
         packDouble(realIn, imagIn);
-
         kiss_fftri(m_fplani, m_fpacked, m_fbuf);
-
-        for (int i = 0; i < m_size; ++i) {
-            realOut[i] = m_fbuf[i];
-        }
+        v_convert(realOut, m_fbuf, m_size);
     }
 
     void inverseInterleaved(const double *BQ_R__ complexIn, double *BQ_R__ realOut) {
-
         v_convert((float *)m_fpacked, complexIn, m_size + 2);
-
         kiss_fftri(m_fplani, m_fpacked, m_fbuf);
-
-        for (int i = 0; i < m_size; ++i) {
-            realOut[i] = m_fbuf[i];
-        }
+        v_convert(realOut, m_fbuf, m_size);
     }
 
     void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn, double *BQ_R__ realOut) {
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            m_fpacked[i].r = float(magIn[i] * cos(phaseIn[i]));
-            m_fpacked[i].i = float(magIn[i] * sin(phaseIn[i]));
-        }
-
+        v_polar_to_cartesian_interleaved
+            ((float *)m_fpacked, magIn, phaseIn, m_size/2+1);
         kiss_fftri(m_fplani, m_fpacked, m_fbuf);
-
-        for (int i = 0; i < m_size; ++i) {
-            realOut[i] = m_fbuf[i];
-        }
+        v_convert(realOut, m_fbuf, m_size);
     }
 
     void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut) {
-
         const int hs = m_size/2;
-
         for (int i = 0; i <= hs; ++i) {
             m_fpacked[i].r = float(log(magIn[i] + 0.000001));
             m_fpacked[i].i = 0.0f;
         }
-
         kiss_fftri(m_fplani, m_fpacked, m_fbuf);
-
-        for (int i = 0; i < m_size; ++i) {
-            cepOut[i] = m_fbuf[i];
-        }
+        v_convert(cepOut, m_fbuf, m_size);
     }
     
     void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut) {
-
         packFloat(realIn, imagIn);
         kiss_fftri(m_fplani, m_fpacked, realOut);
     }
 
     void inverseInterleaved(const float *BQ_R__ complexIn, float *BQ_R__ realOut) {
-
         v_copy((float *)m_fpacked, complexIn, m_size + 2);
         kiss_fftri(m_fplani, m_fpacked, realOut);
     }
 
     void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn, float *BQ_R__ realOut) {
-
-        const int hs = m_size/2;
-
-        for (int i = 0; i <= hs; ++i) {
-            m_fpacked[i].r = magIn[i] * cosf(phaseIn[i]);
-            m_fpacked[i].i = magIn[i] * sinf(phaseIn[i]);
-        }
-
+        v_polar_to_cartesian_interleaved
+            ((float *)m_fpacked, magIn, phaseIn, m_size/2+1);
         kiss_fftri(m_fplani, m_fpacked, realOut);
     }
 
     void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut) {
-
         const int hs = m_size/2;
-
         for (int i = 0; i <= hs; ++i) {
             m_fpacked[i].r = logf(magIn[i] + 0.000001f);
             m_fpacked[i].i = 0.0f;
         }
-
         kiss_fftri(m_fplani, m_fpacked, cepOut);
     }
 

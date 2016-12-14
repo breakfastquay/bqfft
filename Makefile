@@ -26,7 +26,7 @@
 
 # WARNING! The default option here is VERY SLOW! Read above for better
 # alternatives!
-FFT_DEFINES	:= -DUSE_BUILTIN_FFT
+FFT_DEFINES	:= -DHAVE_BUILTIN_FFT
 
 # Add any related includes and libraries here
 #
@@ -72,7 +72,9 @@ HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 OBJECTS	:= $(SOURCES:.cpp=.o)
 OBJECTS	:= $(OBJECTS:.c=.o)
 
-CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) -I. $(THIRD_PARTY_INCLUDES) -I../bqvec -fpic
+OPTFLAGS := -O3 -ffast-math
+
+CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) $(OPTFLAGS) -I. $(THIRD_PARTY_INCLUDES) -I../bqvec -fpic
 
 LIBRARY	:= libbqfft.a
 
