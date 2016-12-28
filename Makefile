@@ -26,7 +26,7 @@
 
 # WARNING! The default option here is VERY SLOW! Read above for better
 # alternatives!
-FFT_DEFINES	:= -DHAVE_BUILTIN_FFT
+FFT_DEFINES	:= -DUSE_BUILTIN_FFT
 
 # Add any related includes and libraries here
 #
