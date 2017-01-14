@@ -1,0 +1,15 @@
+language: cpp
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    packages:
+      - libboost-test-dev
+      - valgrind
+
+script:
+  - ./build/run-platform-tests.sh "$TRAVIS_OS_NAME"
+

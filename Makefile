@@ -26,73 +26,26 @@
 
 # WARNING! The default option here is VERY SLOW! Read above for better
 # alternatives!
-FFT_DEFINES	:= -DUSE_BUILTIN_FFT
+FFT_DEFINES		:= -DUSE_BUILTIN_FFT
+
+
+# Add to VECTOR_DEFINES and ALLOCATOR_DEFINES any options desired for
+# the bqvec library (that are not already defined in FFT_DEFINES).
+# See the bqvec build documentation for more details.
+#
+# Note that you must supply the same flags when including both bqfft
+# and bqvec headers later as you are using now when compiling the
+# library. (You may find it simplest to just add the source files to
+# your application's build system and not build a library at all.)
+
+VECTOR_DEFINES := 
+ALLOCATOR_DEFINES := 
+
 
 # Add any related includes and libraries here
 #
-THIRD_PARTY_INCLUDES	:=                   # e.g. -I/opt/intel/ipp/include
-THIRD_PARTY_LIBS	:=                   # e.g. -L/opt/intel/ipp/lib/intel64_lin -Wl,-Bstatic -lipps -lippvm -lippcore -Wl,-Bdynamic
+THIRD_PARTY_INCLUDES	:=
+THIRD_PARTY_LIBS	:=
 
 
-# Add to ALLOCATOR_DEFINES options relating to aligned malloc.
-#
-# Available options are
-#
-#  -DHAVE_POSIX_MEMALIGN     The posix_memalign call is available in sys/mman.h
-#  -DLACK_POSIX_MEMALIGN     The posix_memalign call is not available
-#
-#  -DMALLOC_IS_ALIGNED       The malloc call already returns aligned memory
-#  -DMALLOC_IS_NOT_ALIGNED   The malloc call does not return aligned memory
-#
-#  -DUSE_OWN_ALIGNED_MALLOC  No aligned malloc is available, roll your own
-#
-#  -DLACK_BAD_ALLOC          The C++ library lacks the std::bad_alloc exception
-#
-# Here "aligned" is assumed to mean "aligned enough for whatever
-# vector stuff the space will be used for" which most likely means
-# 16-byte alignment.
-#
-# The default is to use _aligned_malloc when building with Visual C++,
-# system malloc when building on OS/X, and posix_memalign otherwise.
-#
-# Note that you must supply the same flags when including bqfft
-# headers later as you are using now when compiling the library. (You
-# may find it simplest to just add the bqfft source files to your
-# application's build system and not build a bqfft library at all.)
-
-ALLOCATOR_DEFINES := -DHAVE_POSIX_MEMALIGN
-
-
-SRC_DIR	:= src
-HEADER_DIR := bqfft
-
-SOURCES	:= $(wildcard $(SRC_DIR)/*.cpp)
-HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
-
-OBJECTS	:= $(SOURCES:.cpp=.o)
-OBJECTS	:= $(OBJECTS:.c=.o)
-
-OPTFLAGS := -O3 -ffast-math
-
-CXXFLAGS := $(FFT_DEFINES) $(ALLOCATOR_DEFINES) $(OPTFLAGS) -I. $(THIRD_PARTY_INCLUDES) -I../bqvec -fpic
-
-LIBRARY	:= libbqfft.a
-
-all:	$(LIBRARY)
-
-$(LIBRARY):	$(OBJECTS)
-	$(AR) rc $@ $^
-
-clean:		
-	rm -f $(OBJECTS)
-
-distclean:	clean
-	rm -f $(LIBRARY)
-
-depend:
-	makedepend -Y -fMakefile $(SOURCES) $(HEADERS)
-
-
-# DO NOT DELETE
-
-src/FFT.o: bqfft/FFT.h
+include build/Makefile.inc

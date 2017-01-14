@@ -1,0 +1,13 @@
+
+FFT_DEFINES		:= -DHAVE_FFTW3
+
+VECTOR_DEFINES		:= 
+
+ALLOCATOR_DEFINES 	:= -DHAVE_POSIX_MEMALIGN
+
+THIRD_PARTY_INCLUDES	:=
+THIRD_PARTY_LIBS	:= -lfftw3 -lfftw3f 
+
+OPTFLAGS		:= -g
+
+include build/Makefile.inc
