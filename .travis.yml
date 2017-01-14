@@ -10,6 +10,9 @@ addons:
       - libboost-test-dev
       - valgrind
 
+before_install:
+  - git clone https://github.com/breakfastquay/bqvec && ( cd bqvec ; make )
+  
 script:
   - ./build/run-platform-tests.sh "$TRAVIS_OS_NAME"
 
