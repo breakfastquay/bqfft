@@ -1,0 +1,11 @@
+
+FFT_DEFINES		:= -DHAVE_VDSP
+
+VECTOR_DEFINES		:= 
+
+ALLOCATOR_DEFINES 	:= -DMALLOC_IS_ALIGNED
+
+THIRD_PARTY_INCLUDES	:= 
+THIRD_PARTY_LIBS	:= -framework Accelerate
+
+include build/Makefile.inc
