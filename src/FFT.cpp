@@ -1612,7 +1612,12 @@ public:
         }
         lock();
         if (m_extantf <= 0 && m_extantd <= 0) {
+#ifndef FFTW_DOUBLE_ONLY
+            fftwf_cleanup();
+#endif
+#ifndef FFTW_SINGLE_ONLY
             fftw_cleanup();
+#endif
         }
         unlock();
     }
