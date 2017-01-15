@@ -12,7 +12,7 @@ addons:
       - libfftw3-dev
 
 before_install:
-  - ( cd .. ; git clone https://github.com/breakfastquay/bqvec && cd bqvec && make )
+  - ( cd .. ; git clone https://github.com/breakfastquay/bqvec )
   - ( cd .. ; curl -OL 'https://downloads.sourceforge.net/project/kissfft/kissfft/v1_3_0/kiss_fft130.tar.gz' && tar xvzf kiss_fft130.tar.gz )
   
 script:
