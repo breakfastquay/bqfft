@@ -84,7 +84,7 @@ extern "C" {
 #endif
 
 #ifdef HAVE_KISSFFT
-#include "kissfft/kiss_fftr.h"
+#include "kiss_fftr.h"
 #endif
 
 #ifndef HAVE_IPP
