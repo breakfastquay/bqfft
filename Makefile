@@ -16,8 +16,6 @@
 # USE_BUILTIN_FFT, the code will be compiled in but will only be used
 # if no other option is available. The default, if no flags are
 # supplied, is for the code to refuse to compile.
-# 
-# Add any relevant -I flags for include paths as well.
 #
 # Note that you must supply the same flags when including bqfft
 # headers later as you are using now when compiling the library. (You
@@ -33,11 +31,6 @@ FFT_DEFINES		:= -DUSE_BUILTIN_FFT
 # the bqvec library (that are not already defined in FFT_DEFINES).
 # See the bqvec build documentation for more details.
 #
-# Note that you must supply the same flags when including both bqfft
-# and bqvec headers later as you are using now when compiling the
-# library. (You may find it simplest to just add the source files to
-# your application's build system and not build a library at all.)
-
 VECTOR_DEFINES := 
 ALLOCATOR_DEFINES := 
 
