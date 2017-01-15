@@ -35,7 +35,7 @@ run() {
     shift
     echo -n "Running \"$@\"..."
     if "$@" > "$tmpfile" 2>&1 ; then
-	if fgrep -q "$successtext" "$tmpfile" ; then
+	if [ -z "$successtext" ] || fgrep -q "$successtext" "$tmpfile" ; then
 	    echo " OK"
 	    return 0
 	else
@@ -68,8 +68,15 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
     echo
     echo "Building and testing with $mf:"
     echo
+
+    if [ -f "../bqvec/$mf" ]; then
+	echo "Similar Makefile exists in bqvec dir, building there first..."
+	( cd ../bqvec ; run "" make -f "$mf" clean && run "" make -f "$mf" )
+	echo "Build in bqvec done"
+	echo
+    fi
     
-    make -f "$mf" clean >/dev/null
+    run "" make -f "$mf" clean
     run "No errors detected" make -f "$mf" test
 
     if [ "$have_valgrind" = "yes" ]; then
@@ -81,4 +88,6 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
     fi
 done
 
-
+echo
+echo "All tests passed"
+echo

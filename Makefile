@@ -14,13 +14,8 @@
 #
 # You may define more than one of these. If you define
 # USE_BUILTIN_FFT, the code will be compiled in but will only be used
-# if no other option is available. The default, if no flags are
-# supplied, is for the code to refuse to compile.
-#
-# Note that you must supply the same flags when including bqfft
-# headers later as you are using now when compiling the library. (You
-# may find it simplest to just add the bqfft source files to your
-# application's build system and not build a bqfft library at all.)
+# if no other option is available. If no flags are supplied, the code
+# will refuse to compile.
 
 # WARNING! The default option here is VERY SLOW! Read above for better
 # alternatives!
@@ -31,8 +26,8 @@ FFT_DEFINES		:= -DUSE_BUILTIN_FFT
 # the bqvec library (that are not already defined in FFT_DEFINES).
 # See the bqvec build documentation for more details.
 #
-VECTOR_DEFINES := 
-ALLOCATOR_DEFINES := 
+VECTOR_DEFINES 		:= 
+ALLOCATOR_DEFINES 	:= 
 
 
 # Add any related includes and libraries here
