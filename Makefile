@@ -36,4 +36,14 @@ THIRD_PARTY_INCLUDES	:=
 THIRD_PARTY_LIBS	:=
 
 
+# If you are including a set of bq libraries into a project, you can
+# override variables for all of them (including all of the above) in
+# the following file, which all bq* Makefiles will include if found
+
+-include ../Makefile.inc-bq
+
+
+# This project-local Makefile describes the source files and contains
+# no routinely user-modifiable parts
+
 include build/Makefile.inc
