@@ -1703,7 +1703,7 @@ public:
     void saveWisdom(char type) { wisdom(true, type); }
 
     void wisdom(bool save, char type) {
-
+#ifdef USE_FFTW_WISDOM
 #ifdef FFTW_DOUBLE_ONLY
         if (type == 'f') return;
 #endif
@@ -1751,6 +1751,7 @@ public:
         }
 
         fclose(f);
+#endif
     }
 
     void packFloat(const float *BQ_R__ re, const float *BQ_R__ im) {
