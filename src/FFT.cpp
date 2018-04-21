@@ -1751,6 +1751,9 @@ public:
         }
 
         fclose(f);
+#else
+        (void)save;
+        (void)type;
 #endif
     }
 
