@@ -81,8 +81,8 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
 
     if [ "$have_valgrind" = "yes" ]; then
 	for t in test-* ; do
-	    if [ -x "$t" ]; then
-		run "no leaks are possible" valgrind --leak-check=full ./"$t"
+	    if [ -f "$t" -a -x "$t" ]; then
+		run "0 errors from 0 contexts" valgrind --leak-check=full ./"$t"
 	    fi
 	done
     fi
