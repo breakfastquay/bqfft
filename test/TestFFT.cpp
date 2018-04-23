@@ -54,7 +54,7 @@ static const double eps = 1e-7;
 static const float epsf = 1e-6f;
 #else
 static const double eps = 1e-14;
-static const float epsf = 1e-7f;
+static const float epsf = 1e-6f;
 #endif
 
 #define COMPARE(a, b) BOOST_CHECK_SMALL(a-b, eps) 
