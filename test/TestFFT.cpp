@@ -246,12 +246,12 @@ BOOST_AUTO_TEST_CASE(cepstrum)
     FFT(8).forwardMagnitude(in, mag);
     double cep[8];
     FFT(8).inverseCepstral(mag, cep);
-    COMPARE_ZERO(cep[1]);
-    COMPARE_ZERO(cep[2]);
-    COMPARE_ZERO(cep[3]);
-    COMPARE_ZERO(cep[5]);
-    COMPARE_ZERO(cep[6]);
-    COMPARE_ZERO(cep[7]);
+    BOOST_CHECK_SMALL(cep[1], 1e-9);
+    BOOST_CHECK_SMALL(cep[2], 1e-9);
+    BOOST_CHECK_SMALL(cep[3], 1e-9);
+    BOOST_CHECK_SMALL(cep[5], 1e-9);
+    BOOST_CHECK_SMALL(cep[6], 1e-9);
+    BOOST_CHECK_SMALL(cep[7], 1e-9);
     BOOST_CHECK_SMALL(-6.561181 - cep[0]/8, 0.000001);
     BOOST_CHECK_SMALL( 7.254329 - cep[4]/8, 0.000001);
 }

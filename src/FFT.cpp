@@ -3003,6 +3003,247 @@ D_Cross::basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii,
 
 #endif /* USE_BUILTIN_FFT */
 
+class D_DFT : public FFTImpl
+{
+private:
+    template <typename T>
+    class DFT
+    {
+    public:
+        DFT(int size) : m_size(size), m_bins(size/2 + 1) {
+
+            m_sin = allocate_channels<double>(m_size, m_size);
+            m_cos = allocate_channels<double>(m_size, m_size);
+
+            for (int i = 0; i < m_size; ++i) {
+                for (int j = 0; j < m_size; ++j) {
+                    double arg = (double(i) * double(j) * M_PI * 2.0) / m_size;
+                    m_sin[i][j] = sin(arg);
+                    m_cos[i][j] = cos(arg);
+                }
+            }
+        }
+
+        ~DFT() {
+            deallocate_channels(m_sin, m_bins);
+            deallocate_channels(m_cos, m_bins);
+        }
+
+        void forward(const T *BQ_R__ realIn, T *BQ_R__ realOut, T *BQ_R__ imagOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                realOut[i] = T(re);
+                imagOut[i] = T(im);
+            }
+        }
+
+        void forwardInterleaved(const T *BQ_R__ realIn, T *BQ_R__ complexOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                complexOut[i*2] = T(re);
+                complexOut[i*2 + 1] = T(im);
+            }
+        }
+
+        void forwardPolar(const T *BQ_R__ realIn, T *BQ_R__ magOut, T *BQ_R__ phaseOut) {
+            forward(realIn, magOut, phaseOut); // temporarily
+            for (int i = 0; i < m_bins; ++i) {
+                T re = magOut[i], im = phaseOut[i];
+                c_magphase(magOut + i, phaseOut + i, re, im);
+            }
+        }
+
+        void forwardMagnitude(const T *BQ_R__ realIn, T *BQ_R__ magOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                magOut[i] = T(sqrt(re * re + im * im));
+            }
+        }
+
+        void inverse(const T *BQ_R__ realIn, const T *BQ_R__ imagIn, T *BQ_R__ realOut) {
+            v_zero(realOut, m_size);
+            for (int i = 0; i < m_size; ++i) {
+                double sre = 0.0;
+                for (int j = 0; j < m_bins; ++j) {
+                    double re =
+                        realIn[j] * m_cos[j][i] -
+                        imagIn[j] * m_sin[j][i];
+                    sre += re;
+                }
+                for (int j = m_bins; j < m_size; ++j) {
+                    double re =
+                        realIn[m_size - j] * m_cos[j][i] +
+                        imagIn[m_size - j] * m_sin[j][i];
+                    sre += re;
+                }
+                realOut[i] = T(sre);
+            }
+        }
+
+        void inverseInterleaved(const T *BQ_R__ complexIn, T *BQ_R__ realOut) {
+            v_zero(realOut, m_size);
+            for (int i = 0; i < m_size; ++i) {
+                double sre = 0.0;
+                for (int j = 0; j < m_bins; ++j) {
+                    double re =
+                        complexIn[j*2] * m_cos[j][i] -
+                        complexIn[j*2 + 1] * m_sin[j][i];
+                    sre += re;
+                }
+                for (int j = m_bins; j < m_size; ++j) {
+                    double re =
+                        complexIn[(m_size - j) * 2] * m_cos[j][i] +
+                        complexIn[(m_size - j) * 2 + 1] * m_sin[j][i];
+                    sre += re;
+                }
+                realOut[i] = T(sre);
+            }
+        }
+
+        void inversePolar(const T *BQ_R__ magIn, const T *BQ_R__ phaseIn, T *BQ_R__ realOut) {
+            T *complexIn = allocate<T>(m_bins * 2);
+            v_polar_to_cartesian_interleaved(complexIn, magIn, phaseIn, m_bins);
+            inverseInterleaved(complexIn, realOut);
+            deallocate(complexIn);
+        }
+
+        void inverseCepstral(const T *BQ_R__ magIn, T *BQ_R__ cepOut) {
+            T *complexIn = allocate_and_zero<T>(m_bins * 2);
+            for (int i = 0; i < m_bins; ++i) {
+                complexIn[i*2] = T(log(magIn[i] + 0.000001));
+            }
+            inverseInterleaved(complexIn, cepOut);
+            deallocate(complexIn);
+        }
+
+    private:
+        const int m_size;
+        const int m_bins;
+        double **m_sin;
+        double **m_cos;
+    };
+    
+public:
+    D_DFT(int size) : m_size(size), m_double(0), m_float(0) { }
+
+    ~D_DFT() {
+        delete m_double;
+        delete m_float;
+    }
+
+    int getSize() const {
+        return m_size;
+    }
+
+    FFT::Precisions
+    getSupportedPrecisions() const {
+        return FFT::DoublePrecision;
+    }
+
+    void initFloat() {
+        if (!m_float) {
+            m_float = new DFT<float>(m_size);
+        }
+    }
+        
+    void initDouble() {
+        if (!m_double) {
+            m_double = new DFT<double>(m_size);
+        }
+    }
+
+    void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut) {
+        initDouble();
+        m_double->forward(realIn, realOut, imagOut);
+    }
+
+    void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut) {
+        initDouble();
+        m_double->forwardInterleaved(realIn, complexOut);
+    }
+
+    void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
+        initDouble();
+        m_double->forwardPolar(realIn, magOut, phaseOut);
+    }
+
+    void forwardMagnitude(const double *BQ_R__ realIn, double *BQ_R__ magOut) {
+        initDouble();
+        m_double->forwardMagnitude(realIn, magOut);
+    }
+
+    void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut, float *BQ_R__ imagOut) {
+        initFloat();
+        m_float->forward(realIn, realOut, imagOut);
+    }
+
+    void forwardInterleaved(const float *BQ_R__ realIn, float *BQ_R__ complexOut) {
+        initFloat();
+        m_float->forwardInterleaved(realIn, complexOut);
+    }
+
+    void forwardPolar(const float *BQ_R__ realIn, float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
+        initFloat();
+        m_float->forwardPolar(realIn, magOut, phaseOut);
+    }
+
+    void forwardMagnitude(const float *BQ_R__ realIn, float *BQ_R__ magOut) {
+        initFloat();
+        m_float->forwardMagnitude(realIn, magOut);
+    }
+
+    void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inverse(realIn, imagIn, realOut);
+    }
+
+    void inverseInterleaved(const double *BQ_R__ complexIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inverseInterleaved(complexIn, realOut);
+    }
+
+    void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inversePolar(magIn, phaseIn, realOut);
+    }
+
+    void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut) {
+        initDouble();
+        m_double->inverseCepstral(magIn, cepOut);
+    }
+
+    void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inverse(realIn, imagIn, realOut);
+    }
+
+    void inverseInterleaved(const float *BQ_R__ complexIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inverseInterleaved(complexIn, realOut);
+    }
+
+    void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inversePolar(magIn, phaseIn, realOut);
+    }
+
+    void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut) {
+        initFloat();
+        m_float->inverseCepstral(magIn, cepOut);
+    }
+
+private:
+    int m_size;
+    DFT<double> *m_double;
+    DFT<float> *m_float;
+};
+
 } /* end namespace FFTs */
 
 std::string
@@ -3036,6 +3277,7 @@ FFT::getImplementations()
 #ifdef USE_BUILTIN_FFT
     impls.insert("cross");
 #endif
+    impls.insert("dft");
     return impls;
 }
 
@@ -3046,7 +3288,8 @@ FFT::pickDefaultImplementation()
 
     std::set<std::string> impls = getImplementations();
 
-    std::string best = "cross";
+    std::string best = "dft";
+    if (impls.find("cross") != impls.end()) best = "cross";
     if (impls.find("kissfft") != impls.end()) best = "kissfft";
     if (impls.find("medialib") != impls.end()) best = "medialib";
     if (impls.find("openmax") != impls.end()) best = "openmax";
@@ -3123,6 +3366,8 @@ FFT::FFT(int size, int debugLevel) :
 #ifdef USE_BUILTIN_FFT
         d = new FFTs::D_Cross(size);
 #endif
+    } else if (impl == "dft") {
+        d = new FFTs::D_DFT(size);
     }
 
     if (!d) {
@@ -3318,10 +3563,18 @@ FFT::getSupportedPrecisions() const
 
 #ifdef FFT_MEASUREMENT
 
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
 std::string
+#else
+void
+#endif
 FFT::tune()
 {
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
     std::ostringstream os;
+#else
+#define os std::cerr
+#endif
     os << "FFT::tune()..." << std::endl;
 
     std::vector<int> sizes;
@@ -3407,6 +3660,12 @@ FFT::tune()
         d->initDouble();
         candidates[d] = 6;
 #endif
+
+        os << "Constructing new DFT object for size " << size << "..." << std::endl;
+        d = new FFTs::D_DFT(size);
+        d->initFloat();
+        d->initDouble();
+        candidates[d] = 7;
 
         os << "CLOCKS_PER_SEC = " << CLOCKS_PER_SEC << std::endl;
         float divisor = float(CLOCKS_PER_SEC) / 1000.f;
@@ -3590,7 +3849,9 @@ FFT::tune()
 
     os << "overall winner is " << best << " with " << bestscore << " wins" << std::endl;
 
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
     return os.str();
+#endif
 }
 
 #endif
