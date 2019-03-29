@@ -139,8 +139,6 @@ public:
 
 protected:
     FFTImpl *d;
-    static std::string m_implementation;
-    static void pickDefaultImplementation();
 
 private:
     FFT(const FFT &); // not provided

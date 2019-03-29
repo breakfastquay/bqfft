@@ -49,3 +49,4 @@ depend:
 
 src/FFT.o: bqfft/FFT.h
 test/TestFFT.o: bqfft/FFT.h
+test/timings.o: src/FFT.cpp bqfft/FFT.h

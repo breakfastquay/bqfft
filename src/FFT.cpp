@@ -6,7 +6,7 @@
     A small library wrapping various FFT implementations for some
     common audio processing use cases.
 
-    Copyright 2007-2016 Particular Programs Ltd.
+    Copyright 2007-2019 Particular Programs Ltd.
 
     Permission is hereby granted, free of charge, to any person
     obtaining a copy of this software and associated documentation
@@ -2477,6 +2477,11 @@ public:
         return m_size;
     }
 
+    SizeConstraint
+    getSizeConstraint() const {
+        return SizeConstraintEven;
+    }
+
     FFT::Precisions
     getSupportedPrecisions() const {
         return FFT::SinglePrecision;
@@ -3022,9 +3027,12 @@ private:
                     m_cos[i][j] = cos(arg);
                 }
             }
+
+            m_tmp = allocate_channels<double>(2, m_size);
         }
 
         ~DFT() {
+            deallocate_channels(m_tmp, 2);
             deallocate_channels(m_sin, m_bins);
             deallocate_channels(m_cos, m_bins);
         }
@@ -3067,42 +3075,40 @@ private:
         }
 
         void inverse(const T *BQ_R__ realIn, const T *BQ_R__ imagIn, T *BQ_R__ realOut) {
-            v_zero(realOut, m_size);
+            for (int i = 0; i < m_bins; ++i) {
+                m_tmp[0][i] = realIn[i];
+                m_tmp[1][i] = imagIn[i];
+            }
+            for (int i = m_bins; i < m_size; ++i) {
+                m_tmp[0][i] = realIn[m_size - i];
+                m_tmp[1][i] = -imagIn[m_size - i];
+            }
             for (int i = 0; i < m_size; ++i) {
-                double sre = 0.0;
-                for (int j = 0; j < m_bins; ++j) {
-                    double re =
-                        realIn[j] * m_cos[j][i] -
-                        imagIn[j] * m_sin[j][i];
-                    sre += re;
-                }
-                for (int j = m_bins; j < m_size; ++j) {
-                    double re =
-                        realIn[m_size - j] * m_cos[j][i] +
-                        imagIn[m_size - j] * m_sin[j][i];
-                    sre += re;
-                }
-                realOut[i] = T(sre);
+                double re = 0.0;
+                const double *const cos = m_cos[i];
+                const double *const sin = m_sin[i];
+                for (int j = 0; j < m_size; ++j) re += m_tmp[0][j] * cos[j];
+                for (int j = 0; j < m_size; ++j) re -= m_tmp[1][j] * sin[j];
+                realOut[i] = T(re);
             }
         }
 
         void inverseInterleaved(const T *BQ_R__ complexIn, T *BQ_R__ realOut) {
-            v_zero(realOut, m_size);
+            for (int i = 0; i < m_bins; ++i) {
+                m_tmp[0][i] = complexIn[i*2];
+                m_tmp[1][i] = complexIn[i*2+1];
+            }
+            for (int i = m_bins; i < m_size; ++i) {
+                m_tmp[0][i] = complexIn[(m_size - i) * 2];
+                m_tmp[1][i] = -complexIn[(m_size - i) * 2 + 1];
+            }
             for (int i = 0; i < m_size; ++i) {
-                double sre = 0.0;
-                for (int j = 0; j < m_bins; ++j) {
-                    double re =
-                        complexIn[j*2] * m_cos[j][i] -
-                        complexIn[j*2 + 1] * m_sin[j][i];
-                    sre += re;
-                }
-                for (int j = m_bins; j < m_size; ++j) {
-                    double re =
-                        complexIn[(m_size - j) * 2] * m_cos[j][i] +
-                        complexIn[(m_size - j) * 2 + 1] * m_sin[j][i];
-                    sre += re;
-                }
-                realOut[i] = T(sre);
+                double re = 0.0;
+                const double *const cos = m_cos[i];
+                const double *const sin = m_sin[i];
+                for (int j = 0; j < m_size; ++j) re += m_tmp[0][j] * cos[j];
+                for (int j = 0; j < m_size; ++j) re -= m_tmp[1][j] * sin[j];
+                realOut[i] = T(re);
             }
         }
 
@@ -3127,6 +3133,7 @@ private:
         const int m_bins;
         double **m_sin;
         double **m_cos;
+        double **m_tmp;
     };
     
 public:
@@ -3246,79 +3253,114 @@ private:
 
 } /* end namespace FFTs */
 
-std::string
-FFT::m_implementation;
+enum SizeConstraint {
+    SizeConstraintNone = 0x0,
+    SizeConstraintEven = 0x1,
+    SizeConstraintPowerOfTwo = 0x2
+};
+
+typedef std::map<std::string, SizeConstraint> ImplMap;
+
+static std::string defaultImplementation;
+
+static ImplMap
+getImplementationDetails()
+{
+    ImplMap impls;
+    
+#ifdef HAVE_IPP
+    impls["ipp"] = SizeConstraintPowerOfTwo;
+#endif
+#ifdef HAVE_FFTW3
+    impls["fftw"] = SizeConstraintNone;
+#endif
+#ifdef HAVE_KISSFFT
+    impls["kissfft"] = SizeConstraintEven;
+#endif
+#ifdef HAVE_VDSP
+    impls["vdsp"] = SizeConstraintPowerOfTwo;
+#endif
+#ifdef HAVE_MEDIALIB
+    impls["medialib"] = SizeConstraintPowerOfTwo;
+#endif
+#ifdef HAVE_OPENMAX
+    impls["openmax"] = SizeConstraintPowerOfTwo;
+#endif
+#ifdef HAVE_SFFT
+    impls["sfft"] = SizeConstraintPowerOfTwo;
+#endif
+#ifdef USE_BUILTIN_FFT
+    impls["cross"] = SizeConstraintPowerOfTwo;
+#endif
+
+    impls["dft"] = SizeConstraintNone;
+
+    return impls;
+}
+
+static std::string
+pickImplementation(int size)
+{
+    ImplMap impls = getImplementationDetails();
+
+    bool isPowerOfTwo = !(size & (size-1));
+    bool isEven = !(size & 1);
+    
+    std::string preference[] = {
+        "ipp", "vdsp", "fftw", "sfft", "openmax",
+        "medialib", "kissfft", "cross"
+    };
+
+    for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
+        ImplMap::const_iterator itr = impls.find(preference[i]);
+        if (itr != impls.end()) {
+            if (itr->second == SizeConstraintPowerOfTwo && !isPowerOfTwo) {
+                continue;
+            }
+            if (itr->second == SizeConstraintEven && !isEven) {
+                continue;
+            }
+            return preference[i];
+        }
+    }
+
+    std::cerr << "WARNING: bqfft: No compiled-in implementation supports size "
+              << size << ", falling back to slow DFT" << std::endl;
+    
+    return "dft";
+}
 
 std::set<std::string>
 FFT::getImplementations()
 {
-    std::set<std::string> impls;
-#ifdef HAVE_IPP
-    impls.insert("ipp");
-#endif
-#ifdef HAVE_FFTW3
-    impls.insert("fftw");
-#endif
-#ifdef HAVE_KISSFFT
-    impls.insert("kissfft");
-#endif
-#ifdef HAVE_VDSP
-    impls.insert("vdsp");
-#endif
-#ifdef HAVE_MEDIALIB
-    impls.insert("medialib");
-#endif
-#ifdef HAVE_OPENMAX
-    impls.insert("openmax");
-#endif
-#ifdef HAVE_SFFT
-    impls.insert("sfft");
-#endif
-#ifdef USE_BUILTIN_FFT
-    impls.insert("cross");
-#endif
-    impls.insert("dft");
-    return impls;
-}
-
-void
-FFT::pickDefaultImplementation()
-{
-    if (m_implementation != "") return;
-
-    std::set<std::string> impls = getImplementations();
-
-    std::string best = "dft";
-    if (impls.find("cross") != impls.end()) best = "cross";
-    if (impls.find("kissfft") != impls.end()) best = "kissfft";
-    if (impls.find("medialib") != impls.end()) best = "medialib";
-    if (impls.find("openmax") != impls.end()) best = "openmax";
-    if (impls.find("sfft") != impls.end()) best = "sfft";
-    if (impls.find("fftw") != impls.end()) best = "fftw";
-    if (impls.find("vdsp") != impls.end()) best = "vdsp";
-    if (impls.find("ipp") != impls.end()) best = "ipp";
-    
-    m_implementation = best;
+    ImplMap impls = getImplementationDetails();
+    std::set<std::string> toReturn;
+    for (ImplMap::const_iterator i = impls.begin(); i != impls.end(); ++i) {
+        toReturn.insert(i->first);
+    }
+    return toReturn;
 }
 
 std::string
 FFT::getDefaultImplementation()
 {
-    return m_implementation;
+    if (defaultImplementation == "") {
+        defaultImplementation = pickImplementation(1024);
+    }
+    return defaultImplementation;
 }
 
 void
 FFT::setDefaultImplementation(std::string i)
 {
-    m_implementation = i;
+    defaultImplementation = i;
 }
 
 FFT::FFT(int size, int debugLevel) :
     d(0)
 {
-    if ((size < 2) ||
-        (size & (size-1))) {
-        std::cerr << "FFT::FFT(" << size << "): power-of-two sizes only supported, minimum size 2" << std::endl;
+    if (size < 2) {
+        std::cerr << "FFT::FFT(" << size << "): minimum size is 2" << std::endl;
 #ifndef NO_EXCEPTIONS
         throw InvalidSize;
 #else
@@ -3326,8 +3368,7 @@ FFT::FFT(int size, int debugLevel) :
 #endif
     }
 
-    if (m_implementation == "") pickDefaultImplementation();
-    std::string impl = m_implementation;
+    std::string impl = pickImplementation(size);
 
     if (debugLevel > 0) {
         std::cerr << "FFT::FFT(" << size << "): using implementation: "
