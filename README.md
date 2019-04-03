@@ -7,13 +7,16 @@ audio processing use cases. Note this is not a general FFT interface,
 as it handles only real inputs.
 
 Transforms of any length are supported, but if you request a length
-not supported by any of the library implementations provided here, or
-by any of the libraries compiled in, a simple slow DFT will be used
-instead. Of the most commonly used libraries, Accelerate and IPP
-support power-of-two lengths only, KissFFT supports any multiple of
-two (because we only use the real-input interface), and FFTW supports
-any length. You can compile in more than one library, so as to use
-e.g. VDSP for powers of two and KissFFT for other even lengths.
+that bqfft does not know how to calculate using any of the libraries
+that have been compiled in, a simple slow DFT will be used instead. A
+warning will be printed to stderr if this happens.
+
+Of the most commonly used libraries, Accelerate and IPP support
+power-of-two FFT lengths only, KissFFT supports any multiple of two
+(because we only use the real-input interface), and FFTW supports any
+length. You can compile in more than one library, so for example if
+you compile in Accelerate and KissFFT, the former will be used for
+powers of two and the latter for other even lengths.
 
 Requires the bqvec library.
 
@@ -24,11 +27,11 @@ more permissive licence.
 
 C++ standard required: C++98 (does not use C++11 or newer features)
 
- * To compile on Linux: Edit Makefile to select implementation, then make test.
+ * To compile on Linux: Edit Makefile to select implementation, then make.
    Do read the notes in the Makefile, and don't attempt to use the default
    implementation, which is very slow
    
- * To compile on macOS: make -f build/Makefile.osx test
+ * To compile on macOS: make -f build/Makefile.osx
 
 [![Build Status](https://travis-ci.org/breakfastquay/bqfft.svg?branch=master)](https://travis-ci.org/breakfastquay/bqfft)
 
