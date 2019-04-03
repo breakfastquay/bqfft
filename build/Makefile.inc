@@ -18,7 +18,7 @@ CXXFLAGS ?= -std=c++98 -Wall -Wextra -Werror $(FFT_DEFINES) $(VECTOR_DEFINES) $(
 
 LIBRARY	:= libbqfft.a
 
-all:	$(LIBRARY)
+all:	$(LIBRARY) test
 
 test:	$(LIBRARY) test-fft
 	./test-fft
