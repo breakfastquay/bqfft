@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_SUITE(TestFFT)
     if (fft.getSupportedPrecisions() & FFT::DoublePrecision) { \
         eps = 1e-14; \
     } else { \
-        eps = 1e-7; \
+        eps = epsf; \
     } \
     (void)epsf; (void)eps;
 
@@ -137,6 +137,12 @@ BOOST_AUTO_TEST_CASE(showImplementations)
     std::cerr << std::endl << std::endl;
 }
 
+
+/*
+ * 1a. Simple synthetic signals, transforms to separate real/imag arrays,
+ *     double-precision
+ */
+
 ALL_IMPL_AUTO_TEST_CASE(dc)
 {
     // DC-only signal. The DC bin is purely real
@@ -217,70 +223,6 @@ ALL_IMPL_AUTO_TEST_CASE(nyquist)
     fft.inverse(re, im, back);
     COMPARE_SCALED(back, in, 4);
 }
-	
-ALL_IMPL_AUTO_TEST_CASE(interleaved)
-{
-    // Sine and cosine mixed, test output format
-    double in[] = { 0.5, 1, -0.5, -1 };
-    double out[6];
-    USING_FFT(4);
-    fft.forwardInterleaved(in, out);
-    COMPARE_ZERO(out[0]);
-    COMPARE_ZERO(out[1]);
-    COMPARE(out[2], 1.0);
-    COMPARE(out[3], -2.0);
-    COMPARE_ZERO(out[4]);
-    COMPARE_ZERO(out[5]);
-    double back[4];
-    fft.inverseInterleaved(out, back);
-    COMPARE_SCALED(back, in, 4);
-}
-
-ALL_IMPL_AUTO_TEST_CASE(cosinePolar)
-{
-    double in[] = { 1, 0, -1, 0 };
-    double mag[3], phase[3];
-    USING_FFT(4);
-    fft.forwardPolar(in, mag, phase);
-    COMPARE_ZERO(mag[0]);
-    COMPARE(mag[1], 2.0);
-    COMPARE_ZERO(mag[2]);
-    // No meaningful tests for phase[i] where mag[i]==0 (phase
-    // could legitimately be anything)
-    COMPARE_ZERO(phase[1]);
-    double back[4];
-    fft.inversePolar(mag, phase, back);
-    COMPARE_SCALED(back, in, 4);
-}
-
-ALL_IMPL_AUTO_TEST_CASE(sinePolar)
-{
-    double in[] = { 0, 1, 0, -1 };
-    double mag[3], phase[3];
-    USING_FFT(4);
-    fft.forwardPolar(in, mag, phase);
-    COMPARE_ZERO(mag[0]);
-    COMPARE(mag[1], 2.0);
-    COMPARE_ZERO(mag[2]);
-    // No meaningful tests for phase[i] where mag[i]==0 (phase
-    // could legitimately be anything)
-    COMPARE(phase[1], -M_PI/2.0);
-    double back[4];
-    fft.inversePolar(mag, phase, back);
-    COMPARE_SCALED(back, in, 4);
-}
-
-ALL_IMPL_AUTO_TEST_CASE(magnitude)
-{
-    // Sine and cosine mixed
-    double in[] = { 0.5, 1, -0.5, -1 };
-    double out[3];
-    USING_FFT(4);
-    fft.forwardMagnitude(in, out);
-    COMPARE_ZERO(out[0]);
-    COMPARE_F(float(out[1]), sqrtf(5.0));
-    COMPARE_ZERO(out[2]);
-}
 
 ALL_IMPL_AUTO_TEST_CASE(dirac)
 {
@@ -297,53 +239,11 @@ ALL_IMPL_AUTO_TEST_CASE(dirac)
     COMPARE_SCALED(back, in, 4);
 }
 
-ALL_IMPL_AUTO_TEST_CASE(cepstrum)
-{
-    double in[] = { 1, 0, 0, 0, 1, 0, 0, 0 };
-    double mag[5];
-    USING_FFT(8);
-    fft.forwardMagnitude(in, mag);
-    double cep[8];
-    fft.inverseCepstral(mag, cep);
-    BOOST_CHECK_SMALL(cep[1], 1e-9);
-    BOOST_CHECK_SMALL(cep[2], 1e-9);
-    BOOST_CHECK_SMALL(cep[3], 1e-9);
-    BOOST_CHECK_SMALL(cep[5], 1e-9);
-    BOOST_CHECK_SMALL(cep[6], 1e-9);
-    BOOST_CHECK_SMALL(cep[7], 1e-9);
-    BOOST_CHECK_SMALL(-6.561181 - cep[0]/8, 0.000001);
-    BOOST_CHECK_SMALL( 7.254329 - cep[4]/8, 0.000001);
-}
 
-ALL_IMPL_AUTO_TEST_CASE(forwardArrayBounds)
-{
-    // initialise bins to something recognisable, so we can tell
-    // if they haven't been written
-    double in[] = { 1, 1, -1, -1 };
-    double re[] = { 999, 999, 999, 999, 999 };
-    double im[] = { 999, 999, 999, 999, 999 };
-    USING_FFT(4);
-    fft.forward(in, re+1, im+1);
-    // And check we haven't overrun the arrays
-    COMPARE(re[0], 999.0);
-    COMPARE(im[0], 999.0);
-    COMPARE(re[4], 999.0);
-    COMPARE(im[4], 999.0);
-}
-
-ALL_IMPL_AUTO_TEST_CASE(inverseArrayBounds)
-{
-    // initialise bins to something recognisable, so we can tell
-    // if they haven't been written
-    double re[] = { 0, 1, 0 };
-    double im[] = { 0, -2, 0 };
-    double out[] = { 999, 999, 999, 999, 999, 999 };
-    USING_FFT(4);
-    fft.inverse(re, im, out+1);
-    // And check we haven't overrun the arrays
-    COMPARE(out[0], 999.0);
-    COMPARE(out[5], 999.0);
-}
+/*
+ * 1b. Simple synthetic signals, transforms to separate real/imag arrays,
+ *     single-precision (i.e. single-precision version of 1a)
+ */
 
 ALL_IMPL_AUTO_TEST_CASE(dcF)
 {
@@ -425,6 +325,118 @@ ALL_IMPL_AUTO_TEST_CASE(nyquistF)
     fft.inverse(re, im, back);
     COMPARE_SCALED_F(back, in, 4);
 }
+
+ALL_IMPL_AUTO_TEST_CASE(diracF)
+{
+    float in[] = { 1, 0, 0, 0 };
+    float re[3], im[3];
+    USING_FFT(4);
+    fft.forward(in, re, im);
+    COMPARE_F(re[0], 1.0f);
+    COMPARE_F(re[1], 1.0f);
+    COMPARE_F(re[2], 1.0f);
+    COMPARE_ALL_F(im, 0.0f);
+    float back[4];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED_F(back, in, 4);
+}
+
+
+/*
+ * 2a. Subset of synthetic signals, testing different output formats
+ *     (interleaved complex, polar, magnitude-only, and our weird
+ *     cepstral thing), double-precision
+ */ 
+
+ALL_IMPL_AUTO_TEST_CASE(interleaved)
+{
+    // Sine and cosine mixed, test output format
+    double in[] = { 0.5, 1, -0.5, -1 };
+    double out[6];
+    USING_FFT(4);
+    fft.forwardInterleaved(in, out);
+    COMPARE_ZERO(out[0]);
+    COMPARE_ZERO(out[1]);
+    COMPARE(out[2], 1.0);
+    COMPARE(out[3], -2.0);
+    COMPARE_ZERO(out[4]);
+    COMPARE_ZERO(out[5]);
+    double back[4];
+    fft.inverseInterleaved(out, back);
+    COMPARE_SCALED(back, in, 4);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(sinePolar)
+{
+    double in[] = { 0, 1, 0, -1 };
+    double mag[3], phase[3];
+    USING_FFT(4);
+    fft.forwardPolar(in, mag, phase);
+    COMPARE_ZERO(mag[0]);
+    COMPARE(mag[1], 2.0);
+    COMPARE_ZERO(mag[2]);
+    // No meaningful tests for phase[i] where mag[i]==0 (phase
+    // could legitimately be anything)
+    COMPARE(phase[1], -M_PI/2.0);
+    double back[4];
+    fft.inversePolar(mag, phase, back);
+    COMPARE_SCALED(back, in, 4);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(cosinePolar)
+{
+    double in[] = { 1, 0, -1, 0 };
+    double mag[3], phase[3];
+    USING_FFT(4);
+    fft.forwardPolar(in, mag, phase);
+    COMPARE_ZERO(mag[0]);
+    COMPARE(mag[1], 2.0);
+    COMPARE_ZERO(mag[2]);
+    // No meaningful tests for phase[i] where mag[i]==0 (phase
+    // could legitimately be anything)
+    COMPARE_ZERO(phase[1]);
+    double back[4];
+    fft.inversePolar(mag, phase, back);
+    COMPARE_SCALED(back, in, 4);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(magnitude)
+{
+    // Sine and cosine mixed
+    double in[] = { 0.5, 1, -0.5, -1 };
+    double out[3];
+    USING_FFT(4);
+    fft.forwardMagnitude(in, out);
+    COMPARE_ZERO(out[0]);
+    COMPARE_F(float(out[1]), sqrtf(5.0));
+    COMPARE_ZERO(out[2]);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(cepstrum)
+{
+    double in[] = { 1, 0, 0, 0, 1, 0, 0, 0 };
+    double mag[5];
+    USING_FFT(8);
+    fft.forwardMagnitude(in, mag);
+    double cep[8];
+    fft.inverseCepstral(mag, cep);
+    BOOST_CHECK_SMALL(cep[1], 1e-9);
+    BOOST_CHECK_SMALL(cep[2], 1e-9);
+    BOOST_CHECK_SMALL(cep[3], 1e-9);
+    BOOST_CHECK_SMALL(cep[5], 1e-9);
+    BOOST_CHECK_SMALL(cep[6], 1e-9);
+    BOOST_CHECK_SMALL(cep[7], 1e-9);
+    BOOST_CHECK_SMALL(-6.561181 - cep[0]/8, 0.000001);
+    BOOST_CHECK_SMALL( 7.254329 - cep[4]/8, 0.000001);
+}
+
+
+/*
+ * 2b. Subset of synthetic signals, testing different output formats
+ *     (interleaved complex, polar, magnitude-only, and our weird
+ *     cepstral thing), single-precision (i.e. single-precision
+ *     version of 2a)
+ */ 
 	
 ALL_IMPL_AUTO_TEST_CASE(interleavedF)
 {
@@ -490,21 +502,6 @@ ALL_IMPL_AUTO_TEST_CASE(magnitudeF)
     COMPARE_ZERO_F(out[2]);
 }
 
-ALL_IMPL_AUTO_TEST_CASE(diracF)
-{
-    float in[] = { 1, 0, 0, 0 };
-    float re[3], im[3];
-    USING_FFT(4);
-    fft.forward(in, re, im);
-    COMPARE_F(re[0], 1.0f);
-    COMPARE_F(re[1], 1.0f);
-    COMPARE_F(re[2], 1.0f);
-    COMPARE_ALL_F(im, 0.0f);
-    float back[4];
-    fft.inverse(re, im, back);
-    COMPARE_SCALED_F(back, in, 4);
-}
-
 ALL_IMPL_AUTO_TEST_CASE(cepstrumF)
 {
     float in[] = { 1, 0, 0, 0, 1, 0, 0, 0 };
@@ -523,16 +520,71 @@ ALL_IMPL_AUTO_TEST_CASE(cepstrumF)
     BOOST_CHECK_SMALL( 7.254329 - cep[4]/8, 0.000001);
 }
 
-ALL_IMPL_AUTO_TEST_CASE(forwardArrayBoundsF)
+
+/*
+ * 4. Bounds checking, double-precision and single-precision
+ */
+
+ALL_IMPL_AUTO_TEST_CASE(forwardArrayBounds)
 {
-    // initialise bins to something recognisable, so we can tell
-    // if they haven't been written
-    float in[] = { 1, 1, -1, -1 };
-    float re[] = { 999, 999, 999, 999, 999 };
-    float im[] = { 999, 999, 999, 999, 999 };
+    double in[] = { 1, 1, -1, -1 };
+
+    // Initialise output bins to something recognisable, so we can
+    // tell if they haven't been written
+    double re[] = { 999, 999, 999, 999, 999 };
+    double im[] = { 999, 999, 999, 999, 999 };
+    
     USING_FFT(4);
     fft.forward(in, re+1, im+1);
-    // And check we haven't overrun the arrays
+    
+    // Check we haven't overrun the output arrays
+    COMPARE(re[0], 999.0);
+    COMPARE(im[0], 999.0);
+    COMPARE(re[4], 999.0);
+    COMPARE(im[4], 999.0);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(inverseArrayBounds)
+{
+    // The inverse transform is only supposed to refer to the first
+    // N/2+1 bins and synthesise the rest rather than read them - so
+    // initialise the next one to some value that would mess up the
+    // results if it were used
+    double re[] = { 0, 1, 0, 456 };
+    double im[] = { 0, -2, 0, 456 };
+
+    // Initialise output bins to something recognisable, so we can
+    // tell if they haven't been written
+    double out[] = { 999, 999, 999, 999, 999, 999 };
+    
+    USING_FFT(4);
+    fft.inverse(re, im, out+1);
+
+    // Check we haven't overrun the output arrays
+    COMPARE(out[0], 999.0);
+    COMPARE(out[5], 999.0);
+
+    // And check the results are as we expect, i.e. that we haven't
+    // used the bogus final bin
+    COMPARE(out[1] / 4, 0.5);
+    COMPARE(out[2] / 4, 1.0);
+    COMPARE(out[3] / 4, -0.5);
+    COMPARE(out[4] / 4, -1.0);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(forwardArrayBoundsF)
+{
+    float in[] = { 1, 1, -1, -1 };
+    
+    // Initialise output bins to something recognisable, so we can
+    // tell if they haven't been written
+    float re[] = { 999, 999, 999, 999, 999 };
+    float im[] = { 999, 999, 999, 999, 999 };
+    
+    USING_FFT(4);
+    fft.forward(in, re+1, im+1);
+    
+    // Check we haven't overrun the output arrays
     COMPARE_F(re[0], 999.0f);
     COMPARE_F(im[0], 999.0f);
     COMPARE_F(re[4], 999.0f);
@@ -541,16 +593,133 @@ ALL_IMPL_AUTO_TEST_CASE(forwardArrayBoundsF)
 
 ALL_IMPL_AUTO_TEST_CASE(inverseArrayBoundsF)
 {
-    // initialise bins to something recognisable, so we can tell
-    // if they haven't been written
-    float re[] = { 0, 1, 0 };
-    float im[] = { 0, -2, 0 };
+    // The inverse transform is only supposed to refer to the first
+    // N/2+1 bins and synthesise the rest rather than read them - so
+    // initialise the next one to some value that would mess up the
+    // results if it were used
+    float re[] = { 0, 1, 0, 456 };
+    float im[] = { 0, -2, 0, 456 };
+
+    // Initialise output bins to something recognisable, so we can
+    // tell if they haven't been written
     float out[] = { 999, 999, 999, 999, 999, 999 };
+    
     USING_FFT(4);
     fft.inverse(re, im, out+1);
-    // And check we haven't overrun the arrays
+    
+    // Check we haven't overrun the output arrays
     COMPARE_F(out[0], 999.0f);
     COMPARE_F(out[5], 999.0f);
+
+    // And check the results are as we expect, i.e. that we haven't
+    // used the bogus final bin
+    COMPARE_F(out[1] / 4.0f, 0.5f);
+    COMPARE_F(out[2] / 4.0f, 1.0f);
+    COMPARE_F(out[3] / 4.0f, -0.5f);
+    COMPARE_F(out[4] / 4.0f, -1.0f);
 }
+
+
+/*
+ * 5. Less common transform lengths - we should always fall back on
+ *    some implementation that can handle these, even if the requested
+ *    one doesn't. Note that the dirac tests we do first are "easier"
+ *    in that they don't vary with length
+ */
+
+ALL_IMPL_AUTO_TEST_CASE(dirac_1)
+{
+    double in[] = { 1 };
+    double re[1], im[1];
+    USING_FFT(1);
+    fft.forward(in, re, im);
+    COMPARE(re[0], 1.0);
+    COMPARE_ALL(im, 0.0);
+    double back[1];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 1);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(dirac_6)
+{
+    double in[] = { 1, 0, 0, 0, 0, 0 };
+    double re[4], im[4];
+    USING_FFT(6);
+    fft.forward(in, re, im);
+    COMPARE(re[0], 1.0);
+    COMPARE(re[1], 1.0);
+    COMPARE(re[2], 1.0);
+    COMPARE(re[3], 1.0);
+    COMPARE_ALL(im, 0.0);
+    double back[6];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 6);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(dirac_7)
+{
+    double in[] = { 1, 0, 0, 0, 0, 0, 0 };
+    double re[4], im[4];
+    USING_FFT(7);
+    fft.forward(in, re, im);
+    COMPARE(re[0], 1.0);
+    COMPARE(re[1], 1.0);
+    COMPARE(re[2], 1.0);
+    COMPARE(re[3], 1.0);
+    COMPARE_ALL(im, 0.0);
+    double back[7];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 7);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(sineCosine_6)
+{
+    // Sine and cosine mixed, i.e. f(x) = 0.5 * cos(2*x*pi/6) + sin(2*x*pi/6)
+    double r = sqrt(3.0)/2.0;
+    double in[] = { 0.5, r + 0.25, r - 0.25, -0.5, -r - 0.25, -r + 0.25 };
+    double re[4], im[4];
+    USING_FFT(6);
+    fft.forward(in, re, im);
+    COMPARE(re[0], 0.0);
+    COMPARE(re[1], 1.5);
+    COMPARE(re[2], 0.0);
+    COMPARE(re[3], 0.0);
+    COMPARE(im[0], 0.0);
+    COMPARE(im[1], -3.0);
+    COMPARE(im[2], 0.0);
+    COMPARE(im[3], 0.0);
+    double back[6];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 6);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(sineCosine_7)
+{
+    // Sine and cosine mixed, i.e. f(x) = 0.5 * cos(2*x*pi/6) + sin(2*x*pi/6)
+    double in[] = {
+        0.5,
+        1.0935763833973966,
+        0.8636674452036665,
+        -0.016600694833651286,
+        -0.8843681730687676,
+        -1.086188379159981,
+        -0.47008658153866323
+    };
+    double re[4], im[4];
+    USING_FFT(7);
+    fft.forward(in, re, im);
+    COMPARE(re[0], 0.0);
+    COMPARE(re[1], 1.75);
+    COMPARE(re[2], 0.0);
+    COMPARE(re[3], 0.0);
+    COMPARE(im[0], 0.0);
+    COMPARE(im[1], -3.5);
+    COMPARE(im[2], 0.0);
+    COMPARE(im[3], 0.0);
+    double back[7];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 7);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
