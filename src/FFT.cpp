@@ -2477,11 +2477,6 @@ public:
         return m_size;
     }
 
-    SizeConstraint
-    getSizeConstraint() const {
-        return SizeConstraintEven;
-    }
-
     FFT::Precisions
     getSupportedPrecisions() const {
         return FFT::SinglePrecision;
