@@ -3249,9 +3249,10 @@ private:
 } /* end namespace FFTs */
 
 enum SizeConstraint {
-    SizeConstraintNone = 0x0,
-    SizeConstraintEven = 0x1,
-    SizeConstraintPowerOfTwo = 0x2
+    SizeConstraintNone           = 0x0,
+    SizeConstraintEven           = 0x1,
+    SizeConstraintPowerOfTwo     = 0x2,
+    SizeConstraintEvenPowerOfTwo = 0x3 // i.e. 0x1 | 0x2. Excludes size 1 obvs
 };
 
 typedef std::map<std::string, SizeConstraint> ImplMap;
@@ -3264,7 +3265,7 @@ getImplementationDetails()
     ImplMap impls;
     
 #ifdef HAVE_IPP
-    impls["ipp"] = SizeConstraintPowerOfTwo;
+    impls["ipp"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef HAVE_FFTW3
     impls["fftw"] = SizeConstraintNone;
@@ -3273,16 +3274,16 @@ getImplementationDetails()
     impls["kissfft"] = SizeConstraintEven;
 #endif
 #ifdef HAVE_VDSP
-    impls["vdsp"] = SizeConstraintPowerOfTwo;
+    impls["vdsp"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef HAVE_MEDIALIB
-    impls["medialib"] = SizeConstraintPowerOfTwo;
+    impls["medialib"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef HAVE_OPENMAX
-    impls["openmax"] = SizeConstraintPowerOfTwo;
+    impls["openmax"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef HAVE_SFFT
-    impls["sfft"] = SizeConstraintPowerOfTwo;
+    impls["sfft"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef USE_BUILTIN_FFT
     impls["cross"] = SizeConstraintPowerOfTwo;
@@ -3304,13 +3305,13 @@ pickImplementation(int size)
     if (defaultImplementation != "") {
         ImplMap::const_iterator itr = impls.find(defaultImplementation);
         if (itr != impls.end()) {
-            if ((itr->second == SizeConstraintPowerOfTwo && !isPowerOfTwo) ||
-                (itr->second == SizeConstraintEven && !isEven)) {
-                std::cerr << "WARNING: bqfft: Explicitly-set default "
-                          << "implementation \"" << defaultImplementation
-                          << "\" does not support size " << size
-                          << ", trying other compiled-in implementations"
-                          << std::endl;
+            if (((itr->second & SizeConstraintPowerOfTwo) && !isPowerOfTwo) ||
+                ((itr->second & SizeConstraintEven) && !isEven)) {
+//                std::cerr << "NOTE: bqfft: Explicitly-set default "
+//                          << "implementation \"" << defaultImplementation
+//                          << "\" does not support size " << size
+//                          << ", trying other compiled-in implementations"
+//                          << std::endl;
             } else {
                 return defaultImplementation;
             }
@@ -3329,10 +3330,10 @@ pickImplementation(int size)
     for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
         ImplMap::const_iterator itr = impls.find(preference[i]);
         if (itr != impls.end()) {
-            if (itr->second == SizeConstraintPowerOfTwo && !isPowerOfTwo) {
+            if ((itr->second & SizeConstraintPowerOfTwo) && !isPowerOfTwo) {
                 continue;
             }
-            if (itr->second == SizeConstraintEven && !isEven) {
+            if ((itr->second & SizeConstraintEven) && !isEven) {
                 continue;
             }
             return preference[i];
@@ -3383,15 +3384,6 @@ FFT::setDefaultImplementation(std::string i)
 FFT::FFT(int size, int debugLevel) :
     d(0)
 {
-    if (size < 2) {
-        std::cerr << "FFT::FFT(" << size << "): minimum size is 2" << std::endl;
-#ifndef NO_EXCEPTIONS
-        throw InvalidSize;
-#else
-        abort();
-#endif
-    }
-
     std::string impl = pickImplementation(size);
 
     if (debugLevel > 0) {
