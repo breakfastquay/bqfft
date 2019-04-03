@@ -3300,6 +3300,26 @@ pickImplementation(int size)
 
     bool isPowerOfTwo = !(size & (size-1));
     bool isEven = !(size & 1);
+
+    if (defaultImplementation != "") {
+        ImplMap::const_iterator itr = impls.find(defaultImplementation);
+        if (itr != impls.end()) {
+            if ((itr->second == SizeConstraintPowerOfTwo && !isPowerOfTwo) ||
+                (itr->second == SizeConstraintEven && !isEven)) {
+                std::cerr << "WARNING: bqfft: Explicitly-set default "
+                          << "implementation \"" << defaultImplementation
+                          << "\" does not support size " << size
+                          << ", trying other compiled-in implementations"
+                          << std::endl;
+            } else {
+                return defaultImplementation;
+            }
+        } else {
+            std::cerr << "WARNING: bqfft: Default implementation \""
+                      << defaultImplementation << "\" is not compiled in"
+                      << std::endl;
+        }
+    } 
     
     std::string preference[] = {
         "ipp", "vdsp", "fftw", "sfft", "openmax",
@@ -3339,16 +3359,25 @@ FFT::getImplementations()
 std::string
 FFT::getDefaultImplementation()
 {
-    if (defaultImplementation == "") {
-        defaultImplementation = pickImplementation(1024);
-    }
     return defaultImplementation;
 }
 
 void
 FFT::setDefaultImplementation(std::string i)
 {
-    defaultImplementation = i;
+    if (i == "") {
+        defaultImplementation = i;
+        return;
+    } 
+    ImplMap impls = getImplementationDetails();
+    ImplMap::const_iterator itr = impls.find(i);
+    if (itr == impls.end()) {
+        std::cerr << "WARNING: bqfft: setDefaultImplementation: "
+                  << "requested implementation \"" << i
+                  << "\" is not compiled in" << std::endl;
+    } else {
+        defaultImplementation = i;
+    }
 }
 
 FFT::FFT(int size, int debugLevel) :
