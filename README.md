@@ -33,6 +33,9 @@ C++ standard required: C++98 (does not use C++11 or newer features)
    
  * To compile on macOS: make -f build/Makefile.osx
 
+ * To build and run tests: as above, but add the "test" target -
+   requires Boost test headers installed
+
 [![Build Status](https://travis-ci.org/breakfastquay/bqfft.svg?branch=master)](https://travis-ci.org/breakfastquay/bqfft)
 
 Copyright 2007-2019 Particular Programs Ltd. See the file COPYING for
