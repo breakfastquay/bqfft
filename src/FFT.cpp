@@ -3028,8 +3028,8 @@ private:
 
         ~DFT() {
             deallocate_channels(m_tmp, 2);
-            deallocate_channels(m_sin, m_bins);
-            deallocate_channels(m_cos, m_bins);
+            deallocate_channels(m_sin, m_size);
+            deallocate_channels(m_cos, m_size);
         }
 
         void forward(const T *BQ_R__ realIn, T *BQ_R__ realOut, T *BQ_R__ imagOut) {
