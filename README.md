@@ -21,7 +21,7 @@ powers of two and the latter for other even lengths.
 Requires the bqvec library.
 
 This code originated as part of the Rubber Band Library written by the
-same authors (see https://bitbucket.org/breakfastquay/rubberband/).
+same authors (see https://hg.sr.ht/~breakfastquay/rubberband/).
 It has been pulled out into a separate library and relicensed under a
 more permissive licence.
 
