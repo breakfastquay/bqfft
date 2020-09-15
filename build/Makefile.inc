@@ -32,6 +32,9 @@ $(LIBRARY):	$(OBJECTS)
 test-fft:	test/TestFFT.o $(LIBRARY)
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_unit_test_framework -L. -lbqfft -L../bqvec -lbqvec $(THIRD_PARTY_LIBS)
 
+timings:       test/timings.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 clean:		
 	rm -f $(OBJECTS) $(TEST_OBJECTS)
 
@@ -46,3 +49,4 @@ depend:
 
 src/FFT.o: bqfft/FFT.h
 test/TestFFT.o: bqfft/FFT.h
+test/timings.o: src/FFT.cpp bqfft/FFT.h

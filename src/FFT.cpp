@@ -6,7 +6,7 @@
     A small library wrapping various FFT implementations for some
     common audio processing use cases.
 
-    Copyright 2007-2016 Particular Programs Ltd.
+    Copyright 2007-2019 Particular Programs Ltd.
 
     Permission is hereby granted, free of charge, to any person
     obtaining a copy of this software and associated documentation
@@ -1703,7 +1703,7 @@ public:
     void saveWisdom(char type) { wisdom(true, type); }
 
     void wisdom(bool save, char type) {
-
+#ifdef USE_FFTW_WISDOM
 #ifdef FFTW_DOUBLE_ONLY
         if (type == 'f') return;
 #endif
@@ -1751,6 +1751,10 @@ public:
         }
 
         fclose(f);
+#else
+        (void)save;
+        (void)type;
+#endif
     }
 
     void packFloat(const float *BQ_R__ re, const float *BQ_R__ im) {
@@ -2999,88 +3003,388 @@ D_Cross::basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii,
 
 #endif /* USE_BUILTIN_FFT */
 
+class D_DFT : public FFTImpl
+{
+private:
+    template <typename T>
+    class DFT
+    {
+    public:
+        DFT(int size) : m_size(size), m_bins(size/2 + 1) {
+
+            m_sin = allocate_channels<double>(m_size, m_size);
+            m_cos = allocate_channels<double>(m_size, m_size);
+
+            for (int i = 0; i < m_size; ++i) {
+                for (int j = 0; j < m_size; ++j) {
+                    double arg = (double(i) * double(j) * M_PI * 2.0) / m_size;
+                    m_sin[i][j] = sin(arg);
+                    m_cos[i][j] = cos(arg);
+                }
+            }
+
+            m_tmp = allocate_channels<double>(2, m_size);
+        }
+
+        ~DFT() {
+            deallocate_channels(m_tmp, 2);
+            deallocate_channels(m_sin, m_size);
+            deallocate_channels(m_cos, m_size);
+        }
+
+        void forward(const T *BQ_R__ realIn, T *BQ_R__ realOut, T *BQ_R__ imagOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                realOut[i] = T(re);
+                imagOut[i] = T(im);
+            }
+        }
+
+        void forwardInterleaved(const T *BQ_R__ realIn, T *BQ_R__ complexOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                complexOut[i*2] = T(re);
+                complexOut[i*2 + 1] = T(im);
+            }
+        }
+
+        void forwardPolar(const T *BQ_R__ realIn, T *BQ_R__ magOut, T *BQ_R__ phaseOut) {
+            forward(realIn, magOut, phaseOut); // temporarily
+            for (int i = 0; i < m_bins; ++i) {
+                T re = magOut[i], im = phaseOut[i];
+                c_magphase(magOut + i, phaseOut + i, re, im);
+            }
+        }
+
+        void forwardMagnitude(const T *BQ_R__ realIn, T *BQ_R__ magOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                double re = 0.0, im = 0.0;
+                for (int j = 0; j < m_size; ++j) re += realIn[j] * m_cos[i][j];
+                for (int j = 0; j < m_size; ++j) im -= realIn[j] * m_sin[i][j];
+                magOut[i] = T(sqrt(re * re + im * im));
+            }
+        }
+
+        void inverse(const T *BQ_R__ realIn, const T *BQ_R__ imagIn, T *BQ_R__ realOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                m_tmp[0][i] = realIn[i];
+                m_tmp[1][i] = imagIn[i];
+            }
+            for (int i = m_bins; i < m_size; ++i) {
+                m_tmp[0][i] = realIn[m_size - i];
+                m_tmp[1][i] = -imagIn[m_size - i];
+            }
+            for (int i = 0; i < m_size; ++i) {
+                double re = 0.0;
+                const double *const cos = m_cos[i];
+                const double *const sin = m_sin[i];
+                for (int j = 0; j < m_size; ++j) re += m_tmp[0][j] * cos[j];
+                for (int j = 0; j < m_size; ++j) re -= m_tmp[1][j] * sin[j];
+                realOut[i] = T(re);
+            }
+        }
+
+        void inverseInterleaved(const T *BQ_R__ complexIn, T *BQ_R__ realOut) {
+            for (int i = 0; i < m_bins; ++i) {
+                m_tmp[0][i] = complexIn[i*2];
+                m_tmp[1][i] = complexIn[i*2+1];
+            }
+            for (int i = m_bins; i < m_size; ++i) {
+                m_tmp[0][i] = complexIn[(m_size - i) * 2];
+                m_tmp[1][i] = -complexIn[(m_size - i) * 2 + 1];
+            }
+            for (int i = 0; i < m_size; ++i) {
+                double re = 0.0;
+                const double *const cos = m_cos[i];
+                const double *const sin = m_sin[i];
+                for (int j = 0; j < m_size; ++j) re += m_tmp[0][j] * cos[j];
+                for (int j = 0; j < m_size; ++j) re -= m_tmp[1][j] * sin[j];
+                realOut[i] = T(re);
+            }
+        }
+
+        void inversePolar(const T *BQ_R__ magIn, const T *BQ_R__ phaseIn, T *BQ_R__ realOut) {
+            T *complexIn = allocate<T>(m_bins * 2);
+            v_polar_to_cartesian_interleaved(complexIn, magIn, phaseIn, m_bins);
+            inverseInterleaved(complexIn, realOut);
+            deallocate(complexIn);
+        }
+
+        void inverseCepstral(const T *BQ_R__ magIn, T *BQ_R__ cepOut) {
+            T *complexIn = allocate_and_zero<T>(m_bins * 2);
+            for (int i = 0; i < m_bins; ++i) {
+                complexIn[i*2] = T(log(magIn[i] + 0.000001));
+            }
+            inverseInterleaved(complexIn, cepOut);
+            deallocate(complexIn);
+        }
+
+    private:
+        const int m_size;
+        const int m_bins;
+        double **m_sin;
+        double **m_cos;
+        double **m_tmp;
+    };
+    
+public:
+    D_DFT(int size) : m_size(size), m_double(0), m_float(0) { }
+
+    ~D_DFT() {
+        delete m_double;
+        delete m_float;
+    }
+
+    int getSize() const {
+        return m_size;
+    }
+
+    FFT::Precisions
+    getSupportedPrecisions() const {
+        return FFT::DoublePrecision;
+    }
+
+    void initFloat() {
+        if (!m_float) {
+            m_float = new DFT<float>(m_size);
+        }
+    }
+        
+    void initDouble() {
+        if (!m_double) {
+            m_double = new DFT<double>(m_size);
+        }
+    }
+
+    void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut) {
+        initDouble();
+        m_double->forward(realIn, realOut, imagOut);
+    }
+
+    void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut) {
+        initDouble();
+        m_double->forwardInterleaved(realIn, complexOut);
+    }
+
+    void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
+        initDouble();
+        m_double->forwardPolar(realIn, magOut, phaseOut);
+    }
+
+    void forwardMagnitude(const double *BQ_R__ realIn, double *BQ_R__ magOut) {
+        initDouble();
+        m_double->forwardMagnitude(realIn, magOut);
+    }
+
+    void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut, float *BQ_R__ imagOut) {
+        initFloat();
+        m_float->forward(realIn, realOut, imagOut);
+    }
+
+    void forwardInterleaved(const float *BQ_R__ realIn, float *BQ_R__ complexOut) {
+        initFloat();
+        m_float->forwardInterleaved(realIn, complexOut);
+    }
+
+    void forwardPolar(const float *BQ_R__ realIn, float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
+        initFloat();
+        m_float->forwardPolar(realIn, magOut, phaseOut);
+    }
+
+    void forwardMagnitude(const float *BQ_R__ realIn, float *BQ_R__ magOut) {
+        initFloat();
+        m_float->forwardMagnitude(realIn, magOut);
+    }
+
+    void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inverse(realIn, imagIn, realOut);
+    }
+
+    void inverseInterleaved(const double *BQ_R__ complexIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inverseInterleaved(complexIn, realOut);
+    }
+
+    void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn, double *BQ_R__ realOut) {
+        initDouble();
+        m_double->inversePolar(magIn, phaseIn, realOut);
+    }
+
+    void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut) {
+        initDouble();
+        m_double->inverseCepstral(magIn, cepOut);
+    }
+
+    void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inverse(realIn, imagIn, realOut);
+    }
+
+    void inverseInterleaved(const float *BQ_R__ complexIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inverseInterleaved(complexIn, realOut);
+    }
+
+    void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn, float *BQ_R__ realOut) {
+        initFloat();
+        m_float->inversePolar(magIn, phaseIn, realOut);
+    }
+
+    void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut) {
+        initFloat();
+        m_float->inverseCepstral(magIn, cepOut);
+    }
+
+private:
+    int m_size;
+    DFT<double> *m_double;
+    DFT<float> *m_float;
+};
+
 } /* end namespace FFTs */
 
-std::string
-FFT::m_implementation;
+enum SizeConstraint {
+    SizeConstraintNone           = 0x0,
+    SizeConstraintEven           = 0x1,
+    SizeConstraintPowerOfTwo     = 0x2,
+    SizeConstraintEvenPowerOfTwo = 0x3 // i.e. 0x1 | 0x2. Excludes size 1 obvs
+};
+
+typedef std::map<std::string, SizeConstraint> ImplMap;
+
+static std::string defaultImplementation;
+
+static ImplMap
+getImplementationDetails()
+{
+    ImplMap impls;
+    
+#ifdef HAVE_IPP
+    impls["ipp"] = SizeConstraintEvenPowerOfTwo;
+#endif
+#ifdef HAVE_FFTW3
+    impls["fftw"] = SizeConstraintNone;
+#endif
+#ifdef HAVE_KISSFFT
+    impls["kissfft"] = SizeConstraintEven;
+#endif
+#ifdef HAVE_VDSP
+    impls["vdsp"] = SizeConstraintEvenPowerOfTwo;
+#endif
+#ifdef HAVE_MEDIALIB
+    impls["medialib"] = SizeConstraintEvenPowerOfTwo;
+#endif
+#ifdef HAVE_OPENMAX
+    impls["openmax"] = SizeConstraintEvenPowerOfTwo;
+#endif
+#ifdef HAVE_SFFT
+    impls["sfft"] = SizeConstraintEvenPowerOfTwo;
+#endif
+#ifdef USE_BUILTIN_FFT
+    impls["cross"] = SizeConstraintPowerOfTwo;
+#endif
+
+    impls["dft"] = SizeConstraintNone;
+
+    return impls;
+}
+
+static std::string
+pickImplementation(int size)
+{
+    ImplMap impls = getImplementationDetails();
+
+    bool isPowerOfTwo = !(size & (size-1));
+    bool isEven = !(size & 1);
+
+    if (defaultImplementation != "") {
+        ImplMap::const_iterator itr = impls.find(defaultImplementation);
+        if (itr != impls.end()) {
+            if (((itr->second & SizeConstraintPowerOfTwo) && !isPowerOfTwo) ||
+                ((itr->second & SizeConstraintEven) && !isEven)) {
+//                std::cerr << "NOTE: bqfft: Explicitly-set default "
+//                          << "implementation \"" << defaultImplementation
+//                          << "\" does not support size " << size
+//                          << ", trying other compiled-in implementations"
+//                          << std::endl;
+            } else {
+                return defaultImplementation;
+            }
+        } else {
+            std::cerr << "WARNING: bqfft: Default implementation \""
+                      << defaultImplementation << "\" is not compiled in"
+                      << std::endl;
+        }
+    } 
+    
+    std::string preference[] = {
+        "ipp", "vdsp", "fftw", "sfft", "openmax",
+        "medialib", "kissfft", "cross"
+    };
+
+    for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
+        ImplMap::const_iterator itr = impls.find(preference[i]);
+        if (itr != impls.end()) {
+            if ((itr->second & SizeConstraintPowerOfTwo) && !isPowerOfTwo) {
+                continue;
+            }
+            if ((itr->second & SizeConstraintEven) && !isEven) {
+                continue;
+            }
+            return preference[i];
+        }
+    }
+
+    std::cerr << "WARNING: bqfft: No compiled-in implementation supports size "
+              << size << ", falling back to slow DFT" << std::endl;
+    
+    return "dft";
+}
 
 std::set<std::string>
 FFT::getImplementations()
 {
-    std::set<std::string> impls;
-#ifdef HAVE_IPP
-    impls.insert("ipp");
-#endif
-#ifdef HAVE_FFTW3
-    impls.insert("fftw");
-#endif
-#ifdef HAVE_KISSFFT
-    impls.insert("kissfft");
-#endif
-#ifdef HAVE_VDSP
-    impls.insert("vdsp");
-#endif
-#ifdef HAVE_MEDIALIB
-    impls.insert("medialib");
-#endif
-#ifdef HAVE_OPENMAX
-    impls.insert("openmax");
-#endif
-#ifdef HAVE_SFFT
-    impls.insert("sfft");
-#endif
-#ifdef USE_BUILTIN_FFT
-    impls.insert("cross");
-#endif
-    return impls;
-}
-
-void
-FFT::pickDefaultImplementation()
-{
-    if (m_implementation != "") return;
-
-    std::set<std::string> impls = getImplementations();
-
-    std::string best = "cross";
-    if (impls.find("kissfft") != impls.end()) best = "kissfft";
-    if (impls.find("medialib") != impls.end()) best = "medialib";
-    if (impls.find("openmax") != impls.end()) best = "openmax";
-    if (impls.find("sfft") != impls.end()) best = "sfft";
-    if (impls.find("fftw") != impls.end()) best = "fftw";
-    if (impls.find("vdsp") != impls.end()) best = "vdsp";
-    if (impls.find("ipp") != impls.end()) best = "ipp";
-    
-    m_implementation = best;
+    ImplMap impls = getImplementationDetails();
+    std::set<std::string> toReturn;
+    for (ImplMap::const_iterator i = impls.begin(); i != impls.end(); ++i) {
+        toReturn.insert(i->first);
+    }
+    return toReturn;
 }
 
 std::string
 FFT::getDefaultImplementation()
 {
-    return m_implementation;
+    return defaultImplementation;
 }
 
 void
 FFT::setDefaultImplementation(std::string i)
 {
-    m_implementation = i;
+    if (i == "") {
+        defaultImplementation = i;
+        return;
+    } 
+    ImplMap impls = getImplementationDetails();
+    ImplMap::const_iterator itr = impls.find(i);
+    if (itr == impls.end()) {
+        std::cerr << "WARNING: bqfft: setDefaultImplementation: "
+                  << "requested implementation \"" << i
+                  << "\" is not compiled in" << std::endl;
+    } else {
+        defaultImplementation = i;
+    }
 }
 
 FFT::FFT(int size, int debugLevel) :
     d(0)
 {
-    if ((size < 2) ||
-        (size & (size-1))) {
-        std::cerr << "FFT::FFT(" << size << "): power-of-two sizes only supported, minimum size 2" << std::endl;
-#ifndef NO_EXCEPTIONS
-        throw InvalidSize;
-#else
-        abort();
-#endif
-    }
-
-    if (m_implementation == "") pickDefaultImplementation();
-    std::string impl = m_implementation;
+    std::string impl = pickImplementation(size);
 
     if (debugLevel > 0) {
         std::cerr << "FFT::FFT(" << size << "): using implementation: "
@@ -3119,6 +3423,8 @@ FFT::FFT(int size, int debugLevel) :
 #ifdef USE_BUILTIN_FFT
         d = new FFTs::D_Cross(size);
 #endif
+    } else if (impl == "dft") {
+        d = new FFTs::D_DFT(size);
     }
 
     if (!d) {
@@ -3314,10 +3620,18 @@ FFT::getSupportedPrecisions() const
 
 #ifdef FFT_MEASUREMENT
 
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
 std::string
+#else
+void
+#endif
 FFT::tune()
 {
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
     std::ostringstream os;
+#else
+#define os std::cerr
+#endif
     os << "FFT::tune()..." << std::endl;
 
     std::vector<int> sizes;
@@ -3403,6 +3717,12 @@ FFT::tune()
         d->initDouble();
         candidates[d] = 6;
 #endif
+
+        os << "Constructing new DFT object for size " << size << "..." << std::endl;
+        d = new FFTs::D_DFT(size);
+        d->initFloat();
+        d->initDouble();
+        candidates[d] = 7;
 
         os << "CLOCKS_PER_SEC = " << CLOCKS_PER_SEC << std::endl;
         float divisor = float(CLOCKS_PER_SEC) / 1000.f;
@@ -3586,7 +3906,9 @@ FFT::tune()
 
     os << "overall winner is " << best << " with " << bestscore << " wins" << std::endl;
 
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
     return os.str();
+#endif
 }
 
 #endif

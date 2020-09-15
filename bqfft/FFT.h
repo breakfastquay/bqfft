@@ -128,13 +128,17 @@ public:
     static void setDefaultImplementation(std::string);
 
 #ifdef FFT_MEASUREMENT
-    static std::string tune();
+    static
+#ifdef FFT_MEASUREMENT_RETURN_RESULT_TEXT
+    std::string
+#else
+    void
+#endif
+    tune();
 #endif
 
 protected:
     FFTImpl *d;
-    static std::string m_implementation;
-    static void pickDefaultImplementation();
 
 private:
     FFT(const FFT &); // not provided
