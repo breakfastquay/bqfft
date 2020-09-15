@@ -18,9 +18,14 @@ C++ standard required: C++98 (does not use C++11 or newer features)
  * To compile on Linux: Edit Makefile to select implementation, then make test.
    Do read the notes in the Makefile, and don't attempt to use the default
    implementation, which is very slow
+
  * To compile on macOS: make -f build/Makefile.osx test
+
+ * Depends on: [bqvec](https://hg.sr.ht/~breakfastquay/bqvec)
+
+ * See also: [bqresample](https://hg.sr.ht/~breakfastquay/bqresample) [bqaudioio](https://hg.sr.ht/~breakfastquay/bqaudioio) [bqthingfactory](https://hg.sr.ht/~breakfastquay/bqthingfactory) [bqaudiostream](https://hg.sr.ht/~breakfastquay/bqaudiostream)
 
 [![Build Status](https://travis-ci.org/breakfastquay/bqfft.svg?branch=master)](https://travis-ci.org/breakfastquay/bqfft)
 
-Copyright 2007-2017 Particular Programs Ltd. See the file COPYING for
+Copyright 2007-2020 Particular Programs Ltd. See the file COPYING for
 (BSD/MIT-style) licence terms.
