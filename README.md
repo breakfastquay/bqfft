@@ -42,9 +42,5 @@ C++ standard required: C++98 (does not use C++11 or newer features)
 
 [![Build Status](https://travis-ci.org/breakfastquay/bqfft.svg?branch=master)](https://travis-ci.org/breakfastquay/bqfft)
 
-<<<<<<< working copy
 Copyright 2007-2020 Particular Programs Ltd. See the file COPYING for
-=======
-Copyright 2007-2019 Particular Programs Ltd. See the file COPYING for
->>>>>>> merge rev
 (BSD/MIT-style) licence terms.
