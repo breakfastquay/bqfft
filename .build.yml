@@ -1,0 +1,20 @@
+image: ubuntu/18.04
+packages:
+  - pkg-config
+  - libboost-test-dev
+  - valgrind
+  - libfftw3-dev
+sources:
+  - hg+https://hg.sr.ht/~breakfastquay/bqfft
+tasks:
+  - setup: |
+      hg clone https://hg.sr.ht/~breakfastquay/bqvec
+      curl -OL 'https://downloads.sourceforge.net/project/kissfft/kissfft/v1_3_0/kiss_fft130.tar.gz' && tar xvzf kiss_fft130.tar.gz
+  - build: |
+      cd bqfft
+      build/run-platform-tests.sh linux
+triggers:
+  - action: email
+    condition: always
+    to: chris.cannam@breakfastquay.com
+    
