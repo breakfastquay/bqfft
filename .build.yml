@@ -4,6 +4,7 @@ packages:
   - libboost-test-dev
   - valgrind
   - libfftw3-dev
+  - curl
 sources:
   - hg+https://hg.sr.ht/~breakfastquay/bqfft
 tasks:
