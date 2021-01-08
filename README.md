@@ -42,5 +42,5 @@ C++ standard required: C++98 (does not use C++11 or newer features)
 
 [![Build status](https://builds.sr.ht/~breakfastquay/bqfft.svg)](https://builds.sr.ht/~breakfastquay/bqfft?)
 
-Copyright 2007-2020 Particular Programs Ltd. See the file COPYING for
+Copyright 2007-2021 Particular Programs Ltd. See the file COPYING for
 (BSD/MIT-style) licence terms.
