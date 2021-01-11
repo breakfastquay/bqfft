@@ -1,6 +1,5 @@
 image: ubuntu/18.04
 packages:
-  - pkg-config
   - libboost-test-dev
   - valgrind
   - libfftw3-dev

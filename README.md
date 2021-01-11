@@ -3,8 +3,11 @@ bqfft
 =====
 
 A small library wrapping various FFT implementations for some common
-audio processing use cases. Note this is not a general FFT interface,
-as it handles only real inputs.
+audio processing use cases. Covers FFTW3, KissFFT, Intel IPP, Apple
+vDSP, along with OpenMAX, Medialib, and a built-in
+implementation. Note this is not a general FFT interface, as it
+handles only real signals on the time-domain side. Suitable for
+Windows, Mac, and Linux.
 
 Transforms of any length are supported, but if you request a length
 that bqfft does not know how to calculate using any of the libraries
