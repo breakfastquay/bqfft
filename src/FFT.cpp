@@ -2690,14 +2690,217 @@ private:
 class D_Builtin : public FFTImpl
 {
 public:
-    D_Builtin(int size) : m_size(size), m_table(0) {
-        
-        m_a = new double[size];
-        m_b = new double[size];
-        m_c = new double[size];
-        m_d = new double[size];
+    D_Builtin(int size) : m_size(size), m_half(size/2), m_table(0) {
+        m_a = allocate_and_zero<double>(m_size);
+        m_b = allocate_and_zero<double>(m_size);
+        m_c = allocate_and_zero<double>(m_size);
+        m_d = allocate_and_zero<double>(m_size);
+        m_table = allocate_and_zero<int>(m_size);
+        makeTable();
+    }
 
-        m_table = new int[m_size];
+    ~D_Builtin() {
+        deallocate(m_table);
+        deallocate(m_a);
+        deallocate(m_b);
+        deallocate(m_c);
+        deallocate(m_d);
+    }
+
+    int getSize() const {
+        return m_size;
+    }
+
+    FFT::Precisions
+    getSupportedPrecisions() const {
+        return FFT::DoublePrecision;
+    }
+
+    void initFloat() { }
+    void initDouble() { }
+
+    void forward(const double *BQ_R__ realIn,
+                 double *BQ_R__ realOut, double *BQ_R__ imagOut) {
+        transform(realIn, 0, m_c, m_d, false);
+        for (int i = 0; i <= m_half; ++i) realOut[i] = m_c[i];
+        if (imagOut) {
+            for (int i = 0; i <= m_half; ++i) imagOut[i] = m_d[i];
+        }
+    }
+
+    void forwardInterleaved(const double *BQ_R__ realIn,
+                            double *BQ_R__ complexOut) {
+        transform(realIn, 0, m_c, m_d, false);
+        for (int i = 0; i <= m_half; ++i) complexOut[i*2] = m_c[i];
+        for (int i = 0; i <= m_half; ++i) complexOut[i*2+1] = m_d[i];
+    }
+
+    void forwardPolar(const double *BQ_R__ realIn,
+                      double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
+        transform(realIn, 0, m_c, m_d, false);
+        v_cartesian_to_polar(magOut, phaseOut, m_c, m_d, m_half + 1);
+    }
+
+    void forwardMagnitude(const double *BQ_R__ realIn,
+                          double *BQ_R__ magOut) {
+        transform(realIn, 0, m_c, m_d, false);
+        v_cartesian_to_magnitudes(magOut, m_c, m_d, m_half + 1);
+    }
+
+    void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut,
+                 float *BQ_R__ imagOut) {
+        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
+        transform(m_a, 0, m_c, m_d, false);
+        for (int i = 0; i <= m_half; ++i) realOut[i] = m_c[i];
+        if (imagOut) {
+            for (int i = 0; i <= m_half; ++i) imagOut[i] = m_d[i];
+        }
+    }
+
+    void forwardInterleaved(const float *BQ_R__ realIn,
+                            float *BQ_R__ complexOut) {
+        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
+        transform(m_a, 0, m_c, m_d, false);
+        for (int i = 0; i <= m_half; ++i) complexOut[i*2] = m_c[i];
+        for (int i = 0; i <= m_half; ++i) complexOut[i*2+1] = m_d[i];
+    }
+
+    void forwardPolar(const float *BQ_R__ realIn,
+                      float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
+        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
+        transform(m_a, 0, m_c, m_d, false);
+        v_cartesian_to_polar(magOut, phaseOut, m_c, m_d, m_half + 1);
+    }
+
+    void forwardMagnitude(const float *BQ_R__ realIn,
+                          float *BQ_R__ magOut) {
+        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
+        transform(m_a, 0, m_c, m_d, false);
+        v_cartesian_to_magnitudes(magOut, m_c, m_d, m_half + 1);
+    }
+
+    void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn,
+                 double *BQ_R__ realOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            double real = realIn[i];
+            double imag = imagIn[i];
+            m_a[i] = real;
+            m_b[i] = imag;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = -imag;
+            }
+        }
+        transform(m_a, m_b, realOut, m_d, true);
+    }
+
+    void inverseInterleaved(const double *BQ_R__ complexIn,
+                            double *BQ_R__ realOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            double real = complexIn[i*2];
+            double imag = complexIn[i*2+1];
+            m_a[i] = real;
+            m_b[i] = imag;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = -imag;
+            }
+        }
+        transform(m_a, m_b, realOut, m_d, true);
+    }
+
+    void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn,
+                      double *BQ_R__ realOut) {
+        v_polar_to_cartesian(m_a, m_b, magIn, phaseIn, m_half + 1);
+        for (int i = 1; i < m_half; ++i) {
+            m_a[m_size - i] = m_a[i];
+            m_b[m_size - i] = -m_b[i];
+        }
+        transform(m_a, m_b, realOut, m_d, true);
+    }
+
+    void inverseCepstral(const double *BQ_R__ magIn,
+                         double *BQ_R__ cepOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            double real = log(magIn[i] + 0.000001);
+            m_a[i] = real;
+            m_b[i] = 0.0;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = 0.0;
+            }
+        }
+        transform(m_a, m_b, cepOut, m_d, true);
+    }
+
+    void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn,
+                 float *BQ_R__ realOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            float real = realIn[i];
+            float imag = imagIn[i];
+            m_a[i] = real;
+            m_b[i] = imag;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = -imag;
+            }
+        }
+        transform(m_a, m_b, m_c, m_d, true);
+        v_convert(realOut, m_c, m_size);
+    }
+
+    void inverseInterleaved(const float *BQ_R__ complexIn,
+                            float *BQ_R__ realOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            float real = complexIn[i*2];
+            float imag = complexIn[i*2+1];
+            m_a[i] = real;
+            m_b[i] = imag;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = -imag;
+            }
+        }
+        transform(m_a, m_b, m_c, m_d, true);
+        v_convert(realOut, m_c, m_size);
+    }
+
+    void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn,
+                      float *BQ_R__ realOut) {
+        v_polar_to_cartesian(m_a, m_b, magIn, phaseIn, m_half + 1);
+        for (int i = 1; i < m_half; ++i) {
+            m_a[m_size - i] = m_a[i];
+            m_b[m_size - i] = -m_b[i];
+        }
+        transform(m_a, m_b, m_c, m_d, true);
+        v_convert(realOut, m_c, m_size);
+    }
+
+    void inverseCepstral(const float *BQ_R__ magIn,
+                         float *BQ_R__ cepOut) {
+        for (int i = 0; i <= m_half; ++i) {
+            float real = logf(magIn[i] + 0.000001);
+            m_a[i] = real;
+            m_b[i] = 0.0;
+            if (i > 0) {
+                m_a[m_size-i] = real;
+                m_b[m_size-i] = 0.0;
+            }
+        }
+        transform(m_a, m_b, m_c, m_d, true);
+        v_convert(cepOut, m_c, m_size);
+    }
+
+private:
+    const int m_size;
+    const int m_half;
+    int *m_table;
+    double *m_a;
+    double *m_b;
+    double *m_c;
+    double *m_d;
+
+    void makeTable() {
     
         int bits;
         int i, j, k, m;
@@ -2720,319 +2923,91 @@ public:
             
             m_table[i] = k;
         }
-    }
+    }        
+    
+    void transform(const double *BQ_R__ ri, const double *BQ_R__ ii,
+                   double *BQ_R__ ro, double *BQ_R__ io,
+                   bool inverse) {
 
-    ~D_Builtin() {
-        delete[] m_table;
-        delete[] m_a;
-        delete[] m_b;
-        delete[] m_c;
-        delete[] m_d;
-    }
+        // Following the method of Don Cross's 1996 Pascal implementation
+        
+        if (!ri || !ro || !io) return;
 
-    int getSize() const {
-        return m_size;
-    }
+        int i, j, k, m;
+        int blockSize, blockEnd;
+        double tr, ti;
 
-    FFT::Precisions
-    getSupportedPrecisions() const {
-        return FFT::DoublePrecision;
-    }
+        double angle = 2.0 * M_PI;
+        if (inverse) angle = -angle;
 
-    void initFloat() { }
-    void initDouble() { }
+        const int n = m_size;
 
-    void forward(const double *BQ_R__ realIn, double *BQ_R__ realOut, double *BQ_R__ imagOut) {
-        basefft(false, realIn, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) realOut[i] = m_c[i];
-        if (imagOut) {
-            for (int i = 0; i <= hs; ++i) imagOut[i] = m_d[i];
-        }
-    }
-
-    void forwardInterleaved(const double *BQ_R__ realIn, double *BQ_R__ complexOut) {
-        basefft(false, realIn, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) complexOut[i*2] = m_c[i];
-        for (int i = 0; i <= hs; ++i) complexOut[i*2+1] = m_d[i];
-    }
-
-    void forwardPolar(const double *BQ_R__ realIn, double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
-        basefft(false, realIn, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(m_c[i] * m_c[i] + m_d[i] * m_d[i]);
-            phaseOut[i] = atan2(m_d[i], m_c[i]) ;
-        }
-    }
-
-    void forwardMagnitude(const double *BQ_R__ realIn, double *BQ_R__ magOut) {
-        basefft(false, realIn, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(m_c[i] * m_c[i] + m_d[i] * m_d[i]);
-        }
-    }
-
-    void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut, float *BQ_R__ imagOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        basefft(false, m_a, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) realOut[i] = m_c[i];
-        if (imagOut) {
-            for (int i = 0; i <= hs; ++i) imagOut[i] = m_d[i];
-        }
-    }
-
-    void forwardInterleaved(const float *BQ_R__ realIn, float *BQ_R__ complexOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        basefft(false, m_a, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) complexOut[i*2] = m_c[i];
-        for (int i = 0; i <= hs; ++i) complexOut[i*2+1] = m_d[i];
-    }
-
-    void forwardPolar(const float *BQ_R__ realIn, float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        basefft(false, m_a, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(m_c[i] * m_c[i] + m_d[i] * m_d[i]);
-            phaseOut[i] = atan2(m_d[i], m_c[i]) ;
-        }
-    }
-
-    void forwardMagnitude(const float *BQ_R__ realIn, float *BQ_R__ magOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        basefft(false, m_a, 0, m_c, m_d);
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            magOut[i] = sqrt(m_c[i] * m_c[i] + m_d[i] * m_d[i]);
-        }
-    }
-
-    void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn, double *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            double real = realIn[i];
-            double imag = imagIn[i];
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
+        if (ii) {
+            for (i = 0; i < n; ++i) {
+                ro[m_table[i]] = ri[i];
+            }
+            for (i = 0; i < n; ++i) {
+                io[m_table[i]] = ii[i];
+            }
+        } else {
+            for (i = 0; i < n; ++i) {
+                ro[m_table[i]] = ri[i];
+            }
+            for (i = 0; i < n; ++i) {
+                io[m_table[i]] = 0.0;
             }
         }
-        basefft(true, m_a, m_b, realOut, m_d);
-    }
+        
+        blockEnd = 1;
+        
+        for (blockSize = 2; blockSize <= n; blockSize <<= 1) {
+            
+            double delta = angle / double(blockSize);
+            double sm2 = -sin(-2 * delta);
+            double sm1 = -sin(-delta);
+            double cm2 = cos(-2 * delta);
+            double cm1 = cos(-delta);
+            double w = 2 * cm1;
+            double ar[3], ai[3];
+            
+            for (i = 0; i < n; i += blockSize) {
+                
+                ar[2] = cm2;
+                ar[1] = cm1;
+                
+                ai[2] = sm2;
+                ai[1] = sm1;
 
-    void inverseInterleaved(const double *BQ_R__ complexIn, double *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            double real = complexIn[i*2];
-            double imag = complexIn[i*2+1];
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
+                j = i;
+                
+                for (m = 0; m < blockEnd; ++m) {
+                    
+                    ar[0] = w * ar[1] - ar[2];
+                    ar[2] = ar[1];
+                    ar[1] = ar[0];
+
+                    ai[0] = w * ai[1] - ai[2];
+                    ai[2] = ai[1];
+                    ai[1] = ai[0];
+
+                    k = j + blockEnd;
+                    tr = ar[0] * ro[k] - ai[0] * io[k];
+                    ti = ar[0] * io[k] + ai[0] * ro[k];
+
+                    ro[k] = ro[j] - tr;
+                    io[k] = io[j] - ti;
+
+                    ro[j] += tr;
+                    io[j] += ti;
+
+                    ++j;
+                }
             }
-        }
-        basefft(true, m_a, m_b, realOut, m_d);
-    }
 
-    void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn, double *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            double real = magIn[i] * cos(phaseIn[i]);
-            double imag = magIn[i] * sin(phaseIn[i]);
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
+            blockEnd = blockSize;
         }
-        basefft(true, m_a, m_b, realOut, m_d);
     }
-
-    void inverseCepstral(const double *BQ_R__ magIn, double *BQ_R__ cepOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            double real = log(magIn[i] + 0.000001);
-            m_a[i] = real;
-            m_b[i] = 0.0;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = 0.0;
-            }
-        }
-        basefft(true, m_a, m_b, cepOut, m_d);
-    }
-
-    void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn, float *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            float real = realIn[i];
-            float imag = imagIn[i];
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
-        }
-        basefft(true, m_a, m_b, m_c, m_d);
-        for (int i = 0; i < m_size; ++i) realOut[i] = m_c[i];
-    }
-
-    void inverseInterleaved(const float *BQ_R__ complexIn, float *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            float real = complexIn[i*2];
-            float imag = complexIn[i*2+1];
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
-        }
-        basefft(true, m_a, m_b, m_c, m_d);
-        for (int i = 0; i < m_size; ++i) realOut[i] = m_c[i];
-    }
-
-    void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn, float *BQ_R__ realOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            float real = magIn[i] * cosf(phaseIn[i]);
-            float imag = magIn[i] * sinf(phaseIn[i]);
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
-        }
-        basefft(true, m_a, m_b, m_c, m_d);
-        for (int i = 0; i < m_size; ++i) realOut[i] = m_c[i];
-    }
-
-    void inverseCepstral(const float *BQ_R__ magIn, float *BQ_R__ cepOut) {
-        const int hs = m_size/2;
-        for (int i = 0; i <= hs; ++i) {
-            float real = logf(magIn[i] + 0.000001);
-            m_a[i] = real;
-            m_b[i] = 0.0;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = 0.0;
-            }
-        }
-        basefft(true, m_a, m_b, m_c, m_d);
-        for (int i = 0; i < m_size; ++i) cepOut[i] = m_c[i];
-    }
-
-private:
-    const int m_size;
-    int *m_table;
-    double *m_a;
-    double *m_b;
-    double *m_c;
-    double *m_d;
-    void basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii, double *BQ_R__ ro, double *BQ_R__ io);
 };
-
-void
-D_Builtin::basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii, double *BQ_R__ ro, double *BQ_R__ io)
-{
-    if (!ri || !ro || !io) return;
-
-    int i, j, k, m;
-    int blockSize, blockEnd;
-
-    double tr, ti;
-
-    double angle = 2.0 * M_PI;
-    if (inverse) angle = -angle;
-
-    const int n = m_size;
-
-    if (ii) {
-	for (i = 0; i < n; ++i) {
-	    ro[m_table[i]] = ri[i];
-        }
-	for (i = 0; i < n; ++i) {
-	    io[m_table[i]] = ii[i];
-	}
-    } else {
-	for (i = 0; i < n; ++i) {
-	    ro[m_table[i]] = ri[i];
-        }
-	for (i = 0; i < n; ++i) {
-	    io[m_table[i]] = 0.0;
-	}
-    }
-
-    blockEnd = 1;
-
-    for (blockSize = 2; blockSize <= n; blockSize <<= 1) {
-
-	double delta = angle / (double)blockSize;
-	double sm2 = -sin(-2 * delta);
-	double sm1 = -sin(-delta);
-	double cm2 = cos(-2 * delta);
-	double cm1 = cos(-delta);
-	double w = 2 * cm1;
-	double ar[3], ai[3];
-
-	for (i = 0; i < n; i += blockSize) {
-
-	    ar[2] = cm2;
-	    ar[1] = cm1;
-
-	    ai[2] = sm2;
-	    ai[1] = sm1;
-
-	    for (j = i, m = 0; m < blockEnd; j++, m++) {
-
-		ar[0] = w * ar[1] - ar[2];
-		ar[2] = ar[1];
-		ar[1] = ar[0];
-
-		ai[0] = w * ai[1] - ai[2];
-		ai[2] = ai[1];
-		ai[1] = ai[0];
-
-		k = j + blockEnd;
-		tr = ar[0] * ro[k] - ai[0] * io[k];
-		ti = ar[0] * io[k] + ai[0] * ro[k];
-
-		ro[k] = ro[j] - tr;
-		io[k] = io[j] - ti;
-
-		ro[j] += tr;
-		io[j] += ti;
-	    }
-	}
-
-	blockEnd = blockSize;
-    }
-
-/* fftw doesn't rescale, so nor will we
-
-    if (inverse) {
-
-	double denom = (double)n;
-
-	for (i = 0; i < n; i++) {
-	    ro[i] /= denom;
-	    io[i] /= denom;
-	}
-    }
-*/
-}
 
 #endif /* USE_BUILTIN_FFT */
 

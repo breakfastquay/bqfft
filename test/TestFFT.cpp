@@ -109,13 +109,13 @@ BOOST_AUTO_TEST_SUITE(TestFFT)
     ONE_IMPL_AUTO_TEST_CASE(name, medialib); \
     ONE_IMPL_AUTO_TEST_CASE(name, openmax); \
     ONE_IMPL_AUTO_TEST_CASE(name, sfft); \
-    ONE_IMPL_AUTO_TEST_CASE(name, cross); \
+    ONE_IMPL_AUTO_TEST_CASE(name, builtin); \
     ONE_IMPL_AUTO_TEST_CASE(name, dft); \
     void performTest_##name ()
 
 std::string all_implementations[] = {
     "ipp", "vdsp", "fftw", "sfft", "openmax",
-    "medialib", "kissfft", "cross", "dft"
+    "medialib", "kissfft", "builtin", "dft"
 };
 
 BOOST_AUTO_TEST_CASE(showImplementations)
