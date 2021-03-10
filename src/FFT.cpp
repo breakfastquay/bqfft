@@ -2322,7 +2322,7 @@ pickImplementation(int size)
     } 
     
     std::string preference[] = {
-        "ipp", "vdsp", "fftw", "kissfft", "builtin"
+        "ipp", "vdsp", "fftw", "builtin", "kissfft"
     };
 
     for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
