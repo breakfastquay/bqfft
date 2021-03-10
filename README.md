@@ -56,8 +56,7 @@ more permissive licence.
 C++ standard required: C++98 (does not use C++11 or newer features)
 
  * To compile on Linux: Edit Makefile to select implementation, then make.
-   Do read the notes in the Makefile, and don't attempt to use the default
-   implementation, which is very slow
+   Do read the notes in the Makefile
    
  * To compile on macOS: make -f build/Makefile.osx
 
