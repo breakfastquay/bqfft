@@ -3830,7 +3830,7 @@ FFT::tune()
             }
 
             std::string low;
-            int lowscore = 0;
+            clock_t lowscore = 0;
 
             const char *names[] = {
 
