@@ -1652,20 +1652,22 @@ class D_Builtin : public FFTImpl
 {
 public:
     D_Builtin(int size) : m_size(size), m_half(size/2), m_table(0) {
-        m_a = allocate_and_zero<double>(m_size);
-        m_b = allocate_and_zero<double>(m_size);
-        m_c = allocate_and_zero<double>(m_size);
-        m_d = allocate_and_zero<double>(m_size);
-        m_cos_f = allocate_and_zero<double>(m_half/2);
-        m_sin_f = allocate_and_zero<double>(m_half/2);
-        m_cos_i = allocate_and_zero<double>(m_half/2);
-        m_sin_i = allocate_and_zero<double>(m_half/2);
+        m_table = allocate_and_zero<int>(m_half);
+        m_a = allocate_and_zero<double>(m_half + 1);
+        m_b = allocate_and_zero<double>(m_half + 1);
+        m_c = allocate_and_zero<double>(m_half + 1);
+        m_d = allocate_and_zero<double>(m_half + 1);
+        m_cos_f = allocate_and_zero<double>(m_half / 2);
+        m_sin_f = allocate_and_zero<double>(m_half / 2);
+        m_cos_i = allocate_and_zero<double>(m_half / 2);
+        m_sin_i = allocate_and_zero<double>(m_half / 2);
         m_vr = allocate_and_zero<double>(m_half);
         m_vi = allocate_and_zero<double>(m_half);
         makeTables();
     }
 
     ~D_Builtin() {
+        deallocate(m_table);
         deallocate(m_a);
         deallocate(m_b);
         deallocate(m_c);
@@ -1815,7 +1817,7 @@ public:
 private:
     const int m_size;
     const int m_half;
-    std::vector<int> m_table;
+    int *m_table;
     double *m_a;
     double *m_b;
     double *m_c;
@@ -1836,7 +1838,6 @@ private:
         int i, j, k, m;
 
         int n = m_half;
-        m_table.reserve(n);
         
         for (i = 0; ; ++i) {
             if (n & (1 << i)) {
@@ -1851,7 +1852,7 @@ private:
                 k = (k << 1) | (m & 1);
                 m >>= 1;
             }
-            m_table.push_back(k);
+            m_table[i] = k;
         }
 
         // additional factors for real-complex transform
@@ -1940,7 +1941,8 @@ private:
         double angle = 2.0 * M_PI;
         if (inverse) angle = -angle;
 
-        const int n = m_table.size();
+        // because we are at heart a real-complex fft only
+        const int n = m_half;
 
         if (ii) {
             for (i = 0; i < n; ++i) {
@@ -2328,7 +2330,13 @@ pickImplementation(int size)
     for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
         ImplMap::const_iterator itr = impls.find(preference[i]);
         if (itr != impls.end()) {
-            if ((itr->second & SizeConstraintPowerOfTwo) && !isPowerOfTwo) {
+            if ((itr->second & SizeConstraintPowerOfTwo) &&
+                // out of an abundance of caution we don't attempt to
+                // use power-of-two implementations with size 2
+                // either, as they may involve a half-half
+                // complex-complex underneath (which would end up with
+                // size 0)
+                (!isPowerOfTwo || size < 4)) {
                 continue;
             }
             if ((itr->second & SizeConstraintEven) && !isEven) {
