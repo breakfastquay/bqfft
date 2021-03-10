@@ -4,26 +4,25 @@ bqfft
 
 A small library wrapping various FFT implementations for some common
 audio processing use cases. Contains a built-in implementation and
-also wrappers for FFTW3, KissFFT, Intel IPP, Apple vDSP, and a couple
-of less common libraries.
+wrappers for FFTW3, KissFFT, Intel IPP, and Apple vDSP. Suitable for
+Windows, Mac, Linux, and mobile platforms.
 
 Note this is not a general FFT interface, as it handles only real
-signals on the time-domain side. Suitable for Windows, Mac, and Linux.
+signals on the time-domain side.
 
 Transforms of any length are supported, but if you request a length
 that bqfft does not know how to calculate using any of the libraries
 that have been compiled in, a simple slow DFT will be used instead. A
 warning will be printed to stderr if this happens.
 
-Of the commonly used libraries, vDSP, IPP, and the built-in
-implementation support power-of-two FFT lengths only, KissFFT supports
-any multiple of two, and FFTW supports any length. You can compile in
-more than one library, so for example if you compile in Accelerate and
-KissFFT, the former will be used for powers of two and the latter for
-other even lengths.
+Of the available libraries, vDSP, IPP, and the built-in implementation
+support power-of-two FFT lengths only, KissFFT supports any multiple
+of two, and FFTW supports any length. You can compile in more than one
+library, so for example if you compile in Accelerate and KissFFT, the
+former will be used for powers of two and the latter for other even
+lengths.
 
-Here are some other pros and cons of the most common supported
-libraries:
+Here are some other pros and cons of the supported libraries:
 
  * Intel IPP - By far the fastest on actual Intel hardware. Of
    uncertain benefit with other manufacturers. Not available beyond

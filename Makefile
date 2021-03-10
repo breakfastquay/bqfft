@@ -2,21 +2,20 @@
 # Add to FFT_DEFINES the relevant options for your desired third-party
 # library support.
 #
-# Available options are
+# Available library options are
 #
 #  -DHAVE_IPP         Intel's Integrated Performance Primitives are available
 #  -DHAVE_VDSP        Apple's Accelerate framework is available
 #  -DHAVE_FFTW3       The FFTW library is available
 #  -DHAVE_KISSFFT     The KissFFT library is available
-#  -DHAVE_MEDIALIB    The Medialib library (from Sun) is available
-#  -DHAVE_OPENMAX     The OpenMAX signal processing library is available
 #  -DUSE_BUILTIN_FFT  Compile the built-in FFT code (which is not bad)
 #
-# You may define more than one of these. If you define
-# USE_BUILTIN_FFT, the code will be compiled in but will only be used
-# if no other option is enabled. If no flags are supplied, the code
-# will refuse to compile.
-
+# You may define more than one of these. If you do so, the decision
+# about which implementation to use when an FFT object is constructed
+# will depend on the FFT length (some libraries only support certain
+# lengths) and on some hardcoded expectations about performance. If no
+# flags are supplied, the code will refuse to compile.
+#
 FFT_DEFINES		:= -DUSE_BUILTIN_FFT
 
 

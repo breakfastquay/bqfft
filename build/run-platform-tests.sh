@@ -54,13 +54,17 @@ run() {
 
 for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; do
 
+    uses_ipp=""
+    
     case "$mf" in
 	*~) continue;;
 	*.bak) continue;;
 	*ipp|*all)
 	    if [ ! -d "$ippdir" ]; then
 		continue
-	    fi;;
+	    else
+                uses_ipp=true
+            fi;;
         *kissfft|*all)
             if [ ! -d "$kissfftdir" ]; then
                 continue
@@ -80,7 +84,12 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
 	( cd ../bqvec ; run "" make -f "$mf" clean && run "" make -f "$mf" )
 	echo "Build in bqvec done"
 	echo
-    fi
+    elif [ -n "$uses_ipp" ]; then
+        echo "IPP required, must build accordingly in bqvec dir first..."
+	( cd ../bqvec ; run "" make -f build/Makefile.linux.ipp clean && run "" make -f build/Makefile.linux.ipp )
+	echo "Build in bqvec done"
+	echo
+    fi        
     
     run "" make -f "$mf" distclean
     run "No errors detected" make -f "$mf" test
