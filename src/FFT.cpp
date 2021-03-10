@@ -2695,16 +2695,26 @@ public:
         m_b = allocate_and_zero<double>(m_size);
         m_c = allocate_and_zero<double>(m_size);
         m_d = allocate_and_zero<double>(m_size);
-        m_table = allocate_and_zero<int>(m_size);
-        makeTable();
+        m_cos_f = allocate_and_zero<double>(m_half/2);
+        m_sin_f = allocate_and_zero<double>(m_half/2);
+        m_cos_i = allocate_and_zero<double>(m_half/2);
+        m_sin_i = allocate_and_zero<double>(m_half/2);
+        m_vr = allocate_and_zero<double>(m_half);
+        m_vi = allocate_and_zero<double>(m_half);
+        makeTables();
     }
 
     ~D_Builtin() {
-        deallocate(m_table);
         deallocate(m_a);
         deallocate(m_b);
         deallocate(m_c);
         deallocate(m_d);
+        deallocate(m_cos_f);
+        deallocate(m_sin_f);
+        deallocate(m_cos_i);
+        deallocate(m_sin_i);
+        deallocate(m_vr);
+        deallocate(m_vi);
     }
 
     int getSize() const {
@@ -2721,36 +2731,31 @@ public:
 
     void forward(const double *BQ_R__ realIn,
                  double *BQ_R__ realOut, double *BQ_R__ imagOut) {
-        transform(realIn, 0, m_c, m_d, false);
-        for (int i = 0; i <= m_half; ++i) realOut[i] = m_c[i];
-        if (imagOut) {
-            for (int i = 0; i <= m_half; ++i) imagOut[i] = m_d[i];
-        }
+        transformF(realIn, realOut, imagOut);
     }
 
     void forwardInterleaved(const double *BQ_R__ realIn,
                             double *BQ_R__ complexOut) {
-        transform(realIn, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         for (int i = 0; i <= m_half; ++i) complexOut[i*2] = m_c[i];
         for (int i = 0; i <= m_half; ++i) complexOut[i*2+1] = m_d[i];
     }
 
     void forwardPolar(const double *BQ_R__ realIn,
                       double *BQ_R__ magOut, double *BQ_R__ phaseOut) {
-        transform(realIn, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         v_cartesian_to_polar(magOut, phaseOut, m_c, m_d, m_half + 1);
     }
 
     void forwardMagnitude(const double *BQ_R__ realIn,
                           double *BQ_R__ magOut) {
-        transform(realIn, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         v_cartesian_to_magnitudes(magOut, m_c, m_d, m_half + 1);
     }
 
     void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut,
                  float *BQ_R__ imagOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        transform(m_a, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         for (int i = 0; i <= m_half; ++i) realOut[i] = m_c[i];
         if (imagOut) {
             for (int i = 0; i <= m_half; ++i) imagOut[i] = m_d[i];
@@ -2759,39 +2764,26 @@ public:
 
     void forwardInterleaved(const float *BQ_R__ realIn,
                             float *BQ_R__ complexOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        transform(m_a, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         for (int i = 0; i <= m_half; ++i) complexOut[i*2] = m_c[i];
         for (int i = 0; i <= m_half; ++i) complexOut[i*2+1] = m_d[i];
     }
 
     void forwardPolar(const float *BQ_R__ realIn,
                       float *BQ_R__ magOut, float *BQ_R__ phaseOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        transform(m_a, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         v_cartesian_to_polar(magOut, phaseOut, m_c, m_d, m_half + 1);
     }
 
     void forwardMagnitude(const float *BQ_R__ realIn,
                           float *BQ_R__ magOut) {
-        for (int i = 0; i < m_size; ++i) m_a[i] = realIn[i];
-        transform(m_a, 0, m_c, m_d, false);
+        transformF(realIn, m_c, m_d);
         v_cartesian_to_magnitudes(magOut, m_c, m_d, m_half + 1);
     }
 
     void inverse(const double *BQ_R__ realIn, const double *BQ_R__ imagIn,
                  double *BQ_R__ realOut) {
-        for (int i = 0; i <= m_half; ++i) {
-            double real = realIn[i];
-            double imag = imagIn[i];
-            m_a[i] = real;
-            m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
-        }
-        transform(m_a, m_b, realOut, m_d, true);
+        transformI(realIn, imagIn, realOut);
     }
 
     void inverseInterleaved(const double *BQ_R__ complexIn,
@@ -2801,22 +2793,14 @@ public:
             double imag = complexIn[i*2+1];
             m_a[i] = real;
             m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
         }
-        transform(m_a, m_b, realOut, m_d, true);
+        transformI(m_a, m_b, realOut);
     }
 
     void inversePolar(const double *BQ_R__ magIn, const double *BQ_R__ phaseIn,
                       double *BQ_R__ realOut) {
         v_polar_to_cartesian(m_a, m_b, magIn, phaseIn, m_half + 1);
-        for (int i = 1; i < m_half; ++i) {
-            m_a[m_size - i] = m_a[i];
-            m_b[m_size - i] = -m_b[i];
-        }
-        transform(m_a, m_b, realOut, m_d, true);
+        transformI(m_a, m_b, realOut);
     }
 
     void inverseCepstral(const double *BQ_R__ magIn,
@@ -2825,12 +2809,8 @@ public:
             double real = log(magIn[i] + 0.000001);
             m_a[i] = real;
             m_b[i] = 0.0;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = 0.0;
-            }
         }
-        transform(m_a, m_b, cepOut, m_d, true);
+        transformI(m_a, m_b, cepOut);
     }
 
     void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn,
@@ -2840,13 +2820,8 @@ public:
             float imag = imagIn[i];
             m_a[i] = real;
             m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
         }
-        transform(m_a, m_b, m_c, m_d, true);
-        v_convert(realOut, m_c, m_size);
+        transformI(m_a, m_b, realOut);
     }
 
     void inverseInterleaved(const float *BQ_R__ complexIn,
@@ -2856,24 +2831,14 @@ public:
             float imag = complexIn[i*2+1];
             m_a[i] = real;
             m_b[i] = imag;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = -imag;
-            }
         }
-        transform(m_a, m_b, m_c, m_d, true);
-        v_convert(realOut, m_c, m_size);
+        transformI(m_a, m_b, realOut);
     }
 
     void inversePolar(const float *BQ_R__ magIn, const float *BQ_R__ phaseIn,
                       float *BQ_R__ realOut) {
         v_polar_to_cartesian(m_a, m_b, magIn, phaseIn, m_half + 1);
-        for (int i = 1; i < m_half; ++i) {
-            m_a[m_size - i] = m_a[i];
-            m_b[m_size - i] = -m_b[i];
-        }
-        transform(m_a, m_b, m_c, m_d, true);
-        v_convert(realOut, m_c, m_size);
+        transformI(m_a, m_b, realOut);
     }
 
     void inverseCepstral(const float *BQ_R__ magIn,
@@ -2882,52 +2847,126 @@ public:
             float real = logf(magIn[i] + 0.000001);
             m_a[i] = real;
             m_b[i] = 0.0;
-            if (i > 0) {
-                m_a[m_size-i] = real;
-                m_b[m_size-i] = 0.0;
-            }
         }
-        transform(m_a, m_b, m_c, m_d, true);
-        v_convert(cepOut, m_c, m_size);
+        transformI(m_a, m_b, cepOut);
     }
 
 private:
     const int m_size;
     const int m_half;
-    int *m_table;
+    std::vector<int> m_table;
     double *m_a;
     double *m_b;
     double *m_c;
     double *m_d;
+    double *m_cos_f;
+    double *m_sin_f;
+    double *m_cos_i;
+    double *m_sin_i;
+    double *m_vr;
+    double *m_vi;
 
-    void makeTable() {
-    
+    void makeTables() {
+
+        // main table for complex fft - this is of size m_half,
+        // because we are at heart a real-complex fft only
+        
         int bits;
         int i, j, k, m;
 
+        int n = m_half;
+        m_table.reserve(n);
+        
         for (i = 0; ; ++i) {
-            if (m_size & (1 << i)) {
+            if (n & (1 << i)) {
                 bits = i;
                 break;
             }
         }
         
-        for (i = 0; i < m_size; ++i) {
-            
+        for (i = 0; i < n; ++i) {
             m = i;
-            
             for (j = k = 0; j < bits; ++j) {
                 k = (k << 1) | (m & 1);
                 m >>= 1;
             }
-            
-            m_table[i] = k;
+            m_table.push_back(k);
+        }
+
+        // additional factors for real-complex transform
+        for (i = 0; i < n/2; ++i) {
+            double phase = M_PI * (double(i + 1) / double(m_half) + 0.5);
+            m_cos_f[i] = cos(phase);
+            m_sin_f[i] = sin(phase);
+            m_cos_i[i] = cos(-phase);
+            m_sin_i[i] = sin(-phase);
         }
     }        
+
+    // Uses m_a and m_b internally; does not touch m_c or m_d
+    template <typename T>
+    void transformF(const T *BQ_R__ ri,
+                    double *BQ_R__ ro, double *BQ_R__ io) {
+
+        int halfhalf = m_half / 2;
+        for (int i = 0; i < m_half; ++i) {
+            m_a[i] = ri[i * 2];
+            m_b[i] = ri[i * 2 + 1];
+        }
+        transformComplex(m_a, m_b, m_vr, m_vi, false);
+        ro[0] = m_vr[0] + m_vi[0];
+        ro[m_half] = m_vr[0] - m_vi[0];
+        io[0] = io[m_half] = 0.0;
+        for (int i = 0; i < halfhalf; ++i) {
+            double c = m_cos_f[i];
+            double s = -m_sin_f[i];
+            int k = i + 1;
+            double r0 = m_vr[k];
+            double i0 = m_vi[k];
+            double r1 = m_vr[m_half - k];
+            double i1 = -m_vi[m_half - k];
+            double tw_r = (r0 - r1) * c - (i0 - i1) * s;
+            double tw_i = (r0 - r1) * s + (i0 - i1) * c;
+            ro[k] = (r0 + r1 + tw_r) * 0.5;
+            ro[m_half - k] = (r0 + r1 - tw_r) * 0.5;
+            io[k] = (i0 + i1 + tw_i) * 0.5;
+            io[m_half - k] = (tw_i - i0 - i1) * 0.5;
+        }
+    }
+
+    // Uses m_c and m_d internally; does not touch m_a or m_b
+    template <typename T>
+    void transformI(const double *BQ_R__ ri, const double *BQ_R__ ii,
+                    T *BQ_R__ ro) {
+        
+        int halfhalf = m_half / 2;
+        m_vr[0] = ri[0] + ri[m_half];
+        m_vi[0] = ri[0] - ri[m_half];
+        for (int i = 0; i < halfhalf; ++i) {
+            double c = m_cos_f[i];
+            double s = m_sin_f[i];
+            int k = i + 1;
+            double r0 = ri[k];
+            double r1 = ri[m_half - k];
+            double i0 = ii[k];
+            double i1 = -ii[m_half - k];
+            double tw_r = (r0 - r1) * c - (i0 + i1) * s;
+            double tw_i = (r0 - r1) * s + (i0 + i1) * c;
+            m_vr[k] = (r0 + r1 + tw_r);
+            m_vr[m_half - k] = (r0 + r1 - tw_r);
+            m_vi[k] = (i0 - i1 + tw_i);
+            m_vi[m_half - k] = (tw_i  - i0 + i1);
+        }
+        transformComplex(m_vr, m_vi, m_c, m_d, true);
+        for (int i = 0; i < m_half; ++i) {
+            ro[i*2] = m_c[i];
+            ro[i*2+1] = m_d[i];
+        }
+    }
     
-    void transform(const double *BQ_R__ ri, const double *BQ_R__ ii,
-                   double *BQ_R__ ro, double *BQ_R__ io,
-                   bool inverse) {
+    void transformComplex(const double *BQ_R__ ri, const double *BQ_R__ ii,
+                          double *BQ_R__ ro, double *BQ_R__ io,
+                          bool inverse) {
 
         // Following the method of Don Cross's 1996 Pascal implementation
         
@@ -2940,7 +2979,7 @@ private:
         double angle = 2.0 * M_PI;
         if (inverse) angle = -angle;
 
-        const int n = m_size;
+        const int n = m_table.size();
 
         if (ii) {
             for (i = 0; i < n; ++i) {
@@ -3294,7 +3333,7 @@ getImplementationDetails()
     impls["sfft"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef USE_BUILTIN_FFT
-    impls["builtin"] = SizeConstraintPowerOfTwo;
+    impls["builtin"] = SizeConstraintEvenPowerOfTwo;
 #endif
 
     impls["dft"] = SizeConstraintNone;
