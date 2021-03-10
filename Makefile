@@ -10,15 +10,13 @@
 #  -DHAVE_KISSFFT     The KissFFT library is available
 #  -DHAVE_MEDIALIB    The Medialib library (from Sun) is available
 #  -DHAVE_OPENMAX     The OpenMAX signal processing library is available
-#  -DUSE_BUILTIN_FFT  Compile the built-in FFT code (which is very slow)
+#  -DUSE_BUILTIN_FFT  Compile the built-in FFT code (which is not bad)
 #
 # You may define more than one of these. If you define
 # USE_BUILTIN_FFT, the code will be compiled in but will only be used
-# if no other option is available. If no flags are supplied, the code
+# if no other option is enabled. If no flags are supplied, the code
 # will refuse to compile.
 
-# WARNING! The default option here is VERY SLOW! Read above for better
-# alternatives!
 FFT_DEFINES		:= -DUSE_BUILTIN_FFT
 
 
