@@ -1,0 +1,12 @@
+
+FFT_DEFINES		:= -DHAVE_IPP -DHAVE_FFTW3 -DHAVE_KISSFFT -DUSE_BUILTIN_FFT
+
+VECTOR_DEFINES		:= 
+
+ALLOCATOR_DEFINES 	:= -DHAVE_POSIX_MEMALIGN
+
+THIRD_PARTY_INCLUDES	:= -I/opt/intel/ipp/include -I../thirdparty/kissfft
+THIRD_PARTY_SOURCES     := ../thirdparty/kissfft/kiss_fft.c ../thirdparty/kissfft/kiss_fftr.c
+THIRD_PARTY_LIBS	:= -L/opt/intel/ipp/lib/intel64_lin -Wl,-Bstatic -lipps -lippvm -lippcore -Wl,-Bdynamic -lfftw3 -lfftw3f 
+
+include build/Makefile.inc
