@@ -2110,6 +2110,39 @@ pthread_mutex_t D_FFTW::m_commonMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 #endif
 
+#undef fft_float_type
+#undef fft_double_type
+
+#ifdef FFTW_DOUBLE_ONLY
+#undef fftwf_complex
+#undef fftwf_plan 
+#undef fftwf_plan_dft_r2c_1d
+#undef fftwf_plan_dft_c2r_1d
+#undef fftwf_destroy_plan 
+#undef fftwf_malloc 
+#undef fftwf_free 
+#undef fftwf_execute
+#undef atan2f 
+#undef sqrtf 
+#undef cosf 
+#undef sinf
+#endif /* FFTW_DOUBLE_ONLY */
+
+#ifdef FFTW_SINGLE_ONLY
+#undef fftw_complex
+#undef fftw_plan
+#undef fftw_plan_dft_r2c_1d
+#undef fftw_plan_dft_c2r_1d 
+#undef fftw_destroy_plan
+#undef fftw_malloc
+#undef fftw_free
+#undef fftw_execute
+#undef atan2
+#undef sqrt
+#undef cos
+#undef sin
+#endif /* FFTW_SINGLE_ONLY */
+
 #endif /* HAVE_FFTW3 */
 
 #ifdef HAVE_SFFT
@@ -3011,7 +3044,7 @@ private:
     {
     public:
         DFT(int size) : m_size(size), m_bins(size/2 + 1) {
-
+            
             m_sin = allocate_channels<double>(m_size, m_size);
             m_cos = allocate_channels<double>(m_size, m_size);
 

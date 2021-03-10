@@ -3,7 +3,7 @@ SRC_DIR	:= src
 TEST_DIR := test
 HEADER_DIR := bqfft
 
-SOURCES	:= $(wildcard $(SRC_DIR)/*.cpp)
+SOURCES	:= $(wildcard $(SRC_DIR)/*.cpp) $(THIRD_PARTY_SOURCES)
 HEADERS	:= $(wildcard $(HEADER_DIR)/*.h) $(wildcard $(SRC_DIR)/*.h)
 
 OBJECTS	:= $(SOURCES:.cpp=.o)

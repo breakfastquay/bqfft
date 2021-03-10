@@ -18,6 +18,8 @@ else
     echo "No IPP directory $ippdir, not testing with IPP"
 fi
 
+kissfftdir=../thirdparty/kissfft
+
 if valgrind --version >/dev/null 2>&1 ;
 then
     have_valgrind=yes
@@ -39,12 +41,12 @@ run() {
 	    echo " OK"
 	    return 0
 	else
-	    echo " Failed"
+	    echo " Failed:"
 	    cat "$tmpfile"
 	    return 1
 	fi
     else
-	echo " Failed"
+	echo " Failed:"
 	cat "$tmpfile"
 	return 1
     fi
@@ -59,6 +61,10 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
 	    if [ ! -d "$ippdir" ]; then
 		continue
 	    fi;;
+        *kissfft)
+            if [ ! -d "$kissfftdir" ]; then
+                continue
+            fi;;
     esac
 
     if [ ! -f "$mf" ]; then
@@ -76,7 +82,7 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
 	echo
     fi
     
-    run "" make -f "$mf" clean
+    run "" make -f "$mf" distclean
     run "No errors detected" make -f "$mf" test
 
     if [ "$have_valgrind" = "yes" ]; then

@@ -1,0 +1,12 @@
+
+FFT_DEFINES		:= -DHAVE_KISSFFT
+
+VECTOR_DEFINES		:= 
+
+ALLOCATOR_DEFINES 	:= -DHAVE_POSIX_MEMALIGN
+
+THIRD_PARTY_INCLUDES	:= -I../thirdparty/kissfft
+THIRD_PARTY_SOURCES     := ../thirdparty/kissfft/kiss_fft.c ../thirdparty/kissfft/kiss_fftr.c
+THIRD_PARTY_LIBS	:= 
+
+include build/Makefile.inc
