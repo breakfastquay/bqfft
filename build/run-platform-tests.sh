@@ -57,11 +57,11 @@ for mf in Makefile build/Makefile.$platformtag build/Makefile.$platformtag.* ; d
     case "$mf" in
 	*~) continue;;
 	*.bak) continue;;
-	*ipp)
+	*ipp|*all)
 	    if [ ! -d "$ippdir" ]; then
 		continue
 	    fi;;
-        *kissfft)
+        *kissfft|*all)
             if [ ! -d "$kissfftdir" ]; then
                 continue
             fi;;
