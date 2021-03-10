@@ -2687,10 +2687,10 @@ private:
 
 #ifdef USE_BUILTIN_FFT
 
-class D_Cross : public FFTImpl
+class D_Builtin : public FFTImpl
 {
 public:
-    D_Cross(int size) : m_size(size), m_table(0) {
+    D_Builtin(int size) : m_size(size), m_table(0) {
         
         m_a = new double[size];
         m_b = new double[size];
@@ -2722,7 +2722,7 @@ public:
         }
     }
 
-    ~D_Cross() {
+    ~D_Builtin() {
         delete[] m_table;
         delete[] m_a;
         delete[] m_b;
@@ -2945,7 +2945,7 @@ private:
 };
 
 void
-D_Cross::basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii, double *BQ_R__ ro, double *BQ_R__ io)
+D_Builtin::basefft(bool inverse, const double *BQ_R__ ri, const double *BQ_R__ ii, double *BQ_R__ ro, double *BQ_R__ io)
 {
     if (!ri || !ro || !io) return;
 
@@ -3319,7 +3319,7 @@ getImplementationDetails()
     impls["sfft"] = SizeConstraintEvenPowerOfTwo;
 #endif
 #ifdef USE_BUILTIN_FFT
-    impls["cross"] = SizeConstraintPowerOfTwo;
+    impls["builtin"] = SizeConstraintPowerOfTwo;
 #endif
 
     impls["dft"] = SizeConstraintNone;
@@ -3357,7 +3357,7 @@ pickImplementation(int size)
     
     std::string preference[] = {
         "ipp", "vdsp", "fftw", "sfft", "openmax",
-        "medialib", "kissfft", "cross"
+        "medialib", "kissfft", "builtin"
     };
 
     for (int i = 0; i < int(sizeof(preference)/sizeof(preference[0])); ++i) {
@@ -3452,9 +3452,9 @@ FFT::FFT(int size, int debugLevel) :
 #ifdef HAVE_SFFT
         d = new FFTs::D_SFFT(size);
 #endif
-    } else if (impl == "cross") {
+    } else if (impl == "builtin") {
 #ifdef USE_BUILTIN_FFT
-        d = new FFTs::D_Cross(size);
+        d = new FFTs::D_Builtin(size);
 #endif
     } else if (impl == "dft") {
         d = new FFTs::D_DFT(size);
@@ -3668,8 +3668,8 @@ FFT::tune()
     os << "FFT::tune()..." << std::endl;
 
     std::vector<int> sizes;
-    std::map<FFTImpl *, int> candidates;
-    std::map<int, int> wins;
+    std::map<std::string, FFTImpl *> candidates;
+    std::map<std::string, int> wins;
 
     sizes.push_back(512);
     sizes.push_back(1024);
@@ -3681,7 +3681,7 @@ FFT::tune()
         int size = sizes[si];
 
         while (!candidates.empty()) {
-            delete candidates.begin()->first;
+            delete candidates.begin()->second;
             candidates.erase(candidates.begin());
         }
 
@@ -3692,7 +3692,7 @@ FFT::tune()
         d = new FFTs::D_IPP(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 0;
+        candidates["ipp"] = d;
 #endif
         
 #ifdef HAVE_FFTW3
@@ -3700,7 +3700,7 @@ FFT::tune()
         d = new FFTs::D_FFTW(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 1;
+        candidates["fftw"] = d;
 #endif
 
 #ifdef HAVE_KISSFFT
@@ -3708,15 +3708,15 @@ FFT::tune()
         d = new FFTs::D_KISSFFT(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 2;
+        candidates["kissfft"] = d;
 #endif        
 
 #ifdef USE_BUILTIN_FFT
-        os << "Constructing new Cross FFT object for size " << size << "..." << std::endl;
-        d = new FFTs::D_Cross(size);
+        os << "Constructing new Builtin FFT object for size " << size << "..." << std::endl;
+        d = new FFTs::D_Builtin(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 3;
+        candidates["builtin"] = d;
 #endif
         
 #ifdef HAVE_VDSP
@@ -3724,7 +3724,7 @@ FFT::tune()
         d = new FFTs::D_VDSP(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 4;
+        candidates["vdsp"] = d;
 #endif
         
 #ifdef HAVE_MEDIALIB
@@ -3732,7 +3732,7 @@ FFT::tune()
         d = new FFTs::D_MEDIALIB(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 5;
+        candidates["medialib"] = d;
 #endif
         
 #ifdef HAVE_OPENMAX
@@ -3740,7 +3740,7 @@ FFT::tune()
         d = new FFTs::D_OPENMAX(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 6;
+        candidates["openmax"] = d;
 #endif
         
 #ifdef HAVE_SFFT
@@ -3748,22 +3748,22 @@ FFT::tune()
         d = new FFTs::D_SFFT(size);
 //        d->initFloat();
         d->initDouble();
-        candidates[d] = 6;
+        candidates["sfft"] = d;
 #endif
 
         os << "Constructing new DFT object for size " << size << "..." << std::endl;
         d = new FFTs::D_DFT(size);
         d->initFloat();
         d->initDouble();
-        candidates[d] = 7;
+        candidates["dft"] = d;
 
         os << "CLOCKS_PER_SEC = " << CLOCKS_PER_SEC << std::endl;
         float divisor = float(CLOCKS_PER_SEC) / 1000.f;
         
         os << "Timing order is: ";
-        for (std::map<FFTImpl *, int>::iterator ci = candidates.begin();
+        for (std::map<std::string, FFTImpl *>::iterator ci = candidates.begin();
              ci != candidates.end(); ++ci) {
-            os << ci->second << " ";
+            os << ci->first << " ";
         }
         os << std::endl;
 
@@ -3815,7 +3815,7 @@ FFT::tune()
                 fi[i] = di[i];
             }
 
-            int low = -1;
+            std::string low;
             int lowscore = 0;
 
             const char *names[] = {
@@ -3840,10 +3840,10 @@ FFT::tune()
             };
             os << names[type] << " :: ";
 
-            for (std::map<FFTImpl *, int>::iterator ci = candidates.begin();
+            for (std::map<std::string, FFTImpl *>::iterator ci = candidates.begin();
                  ci != candidates.end(); ++ci) {
 
-                FFTImpl *d = ci->first;
+                FFTImpl *d = ci->second;
 
                 double mean = 0;
 
@@ -3899,8 +3899,8 @@ FFT::tune()
 
                 os << float(end - start)/divisor << " (" << mean << ") ";
 
-                if (low == -1 || (end - start) < lowscore) {
-                    low = ci->second;
+                if (low == "" || (end - start) < lowscore) {
+                    low = ci->first;
                     lowscore = end - start;
                 }
             }
@@ -3923,15 +3923,15 @@ FFT::tune()
     }
 
     while (!candidates.empty()) {
-        delete candidates.begin()->first;
+        delete candidates.begin()->second;
         candidates.erase(candidates.begin());
     }
 
     int bestscore = 0;
-    int best = -1;
+    std::string best;
 
-    for (std::map<int, int>::iterator wi = wins.begin(); wi != wins.end(); ++wi) {
-        if (best == -1 || wi->second > bestscore) {
+    for (std::map<std::string, int>::iterator wi = wins.begin(); wi != wins.end(); ++wi) {
+        if (best == "" || wi->second > bestscore) {
             best = wi->first;
             bestscore = wi->second;
         }
