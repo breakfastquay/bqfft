@@ -834,6 +834,12 @@ ALL_IMPL_AUTO_TEST_CASE(random)
     COMPARE_ARR(re, re_compare, n/2 + 1);
     COMPARE_ARR(im, im_compare, n/2 + 1);
     COMPARE_SCALED_N(back, in, n, n);
+    delete[] back;
+    delete[] im_compare;
+    delete[] re_compare;
+    delete[] im;
+    delete[] re;
+    delete[] in;
 }
 
 BOOST_AUTO_TEST_SUITE_END()
