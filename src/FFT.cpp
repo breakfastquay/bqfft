@@ -1653,36 +1653,36 @@ class D_Builtin : public FFTImpl
 public:
     D_Builtin(int size) : m_size(size), m_half(size/2), m_table(0) {
         m_table = allocate_and_zero<int>(m_half);
-        m_a = allocate_and_zero<double>(m_half + 1);
-        m_b = allocate_and_zero<double>(m_half + 1);
-        m_c = allocate_and_zero<double>(m_half + 1);
-        m_d = allocate_and_zero<double>(m_half + 1);
-        m_cos = allocate_and_zero<double>(m_half / 2);
-        m_sin = allocate_and_zero<double>(m_half / 2);
         m_blockTableSize = 16;
         m_sin1 = allocate_and_zero<double>(m_blockTableSize);
         m_sin2 = allocate_and_zero<double>(m_blockTableSize);
         m_cos1 = allocate_and_zero<double>(m_blockTableSize);
         m_cos2 = allocate_and_zero<double>(m_blockTableSize);
+        m_sinr = allocate_and_zero<double>(m_half / 2);
+        m_cosr = allocate_and_zero<double>(m_half / 2);
         m_vr = allocate_and_zero<double>(m_half);
         m_vi = allocate_and_zero<double>(m_half);
+        m_a = allocate_and_zero<double>(m_half + 1);
+        m_b = allocate_and_zero<double>(m_half + 1);
+        m_c = allocate_and_zero<double>(m_half + 1);
+        m_d = allocate_and_zero<double>(m_half + 1);
         makeTables();
     }
 
     ~D_Builtin() {
         deallocate(m_table);
-        deallocate(m_a);
-        deallocate(m_b);
-        deallocate(m_c);
-        deallocate(m_d);
-        deallocate(m_cos);
-        deallocate(m_sin);
         deallocate(m_sin1);
         deallocate(m_sin2);
         deallocate(m_cos1);
         deallocate(m_cos2);
+        deallocate(m_sinr);
+        deallocate(m_cosr);
         deallocate(m_vr);
         deallocate(m_vi);
+        deallocate(m_a);
+        deallocate(m_b);
+        deallocate(m_c);
+        deallocate(m_d);
     }
 
     int getSize() const {
@@ -1822,20 +1822,20 @@ public:
 private:
     const int m_size;
     const int m_half;
-    int *m_table;
-    double *m_a;
-    double *m_b;
-    double *m_c;
-    double *m_d;
-    double *m_cos;
-    double *m_sin;
     int m_blockTableSize;
+    int *m_table;
     double *m_sin1;
     double *m_sin2;
     double *m_cos1;
     double *m_cos2;
+    double *m_sinr;
+    double *m_cosr;
     double *m_vr;
     double *m_vi;
+    double *m_a;
+    double *m_b;
+    double *m_c;
+    double *m_d;
 
     void makeTables() {
 
@@ -1875,8 +1875,8 @@ private:
         // sin and cos tables for real-complex transform
         for (i = 0; i < n/2; ++i) {
             double phase = M_PI * (double(i + 1) / double(m_half) + 0.5);
-            m_cos[i] = cos(phase);
-            m_sin[i] = sin(phase);
+            m_cosr[i] = cos(phase);
+            m_sinr[i] = sin(phase);
         }
     }        
 
@@ -1895,8 +1895,8 @@ private:
         ro[m_half] = m_vr[0] - m_vi[0];
         io[0] = io[m_half] = 0.0;
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cos[i];
-            double s = -m_sin[i];
+            double c = m_cosr[i];
+            double s = -m_sinr[i];
             int k = i + 1;
             double r0 = m_vr[k];
             double i0 = m_vi[k];
@@ -1920,8 +1920,8 @@ private:
         m_vr[0] = ri[0] + ri[m_half];
         m_vi[0] = ri[0] - ri[m_half];
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cos[i];
-            double s = m_sin[i];
+            double c = m_cosr[i];
+            double s = m_sinr[i];
             int k = i + 1;
             double r0 = ri[k];
             double r1 = ri[m_half - k];
