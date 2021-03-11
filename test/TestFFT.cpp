@@ -77,9 +77,16 @@ BOOST_AUTO_TEST_SUITE(TestFFT)
     for (int cmp_i = 0; cmp_i < (int)(sizeof(a)/sizeof(a[0])); ++cmp_i) { \
         BOOST_CHECK_SMALL(a[cmp_i] - x, epsf); \
     }
-
+#define COMPARE_ARR(a, b, n) \
+    for (int cmp_i = 0; cmp_i < n; ++cmp_i) { \
+        BOOST_CHECK_SMALL(a[cmp_i] - b[cmp_i], eps); \
+    }
 #define COMPARE_SCALED(a, b, s)						\
     for (int cmp_i = 0; cmp_i < (int)(sizeof(a)/sizeof(a[0])); ++cmp_i) { \
+        BOOST_CHECK_SMALL(a[cmp_i]/s - b[cmp_i], eps); \
+    }
+#define COMPARE_SCALED_N(a, b, n, s) \
+    for (int cmp_i = 0; cmp_i < n; ++cmp_i) { \
         BOOST_CHECK_SMALL(a[cmp_i]/s - b[cmp_i], eps); \
     }
 #define COMPARE_SCALED_F(a, b, s)						\
@@ -762,5 +769,36 @@ ALL_IMPL_AUTO_TEST_CASE(sineCosine_7)
     COMPARE_SCALED(back, in, 7);
 }
 
+/*
+ * 6. Slightly longer transform of random data (with a fixed seed for
+ * repeatability). Must pass two tests: (i) same as DFT; (ii) inverse
+ * produces original input (after scaling)
+ */
+
+ALL_IMPL_AUTO_TEST_CASE(random)
+{
+    const int n = 16;
+    double *in = new double[n];
+    double *re = new double[n/2 + 1];
+    double *im = new double[n/2 + 1];
+    double *re_compare = new double[n/2 + 1];
+    double *im_compare = new double[n/2 + 1];
+    double *back = new double[n];
+    srand48(0);
+    for (int i = 0; i < n; ++i) {
+        in[i] = drand48() * 4.0 - 2.0;
+    }
+    USING_FFT(n);
+    if (eps < 1e-12) {
+        eps = 1e-12;
+    }
+    fft.forward(in, re, im);
+    fft.inverse(re, im, back);
+    FFT::setDefaultImplementation("dft");
+    fft.forward(in, re_compare, im_compare);
+    COMPARE_ARR(re, re_compare, n/2 + 1);
+    COMPARE_ARR(im, im_compare, n/2 + 1);
+    COMPARE_SCALED_N(back, in, n, n);
+}
 
 BOOST_AUTO_TEST_SUITE_END()
