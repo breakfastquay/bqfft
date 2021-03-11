@@ -1659,6 +1659,11 @@ public:
         m_d = allocate_and_zero<double>(m_half + 1);
         m_cos = allocate_and_zero<double>(m_half / 2);
         m_sin = allocate_and_zero<double>(m_half / 2);
+        m_blockTableSize = 16;
+        m_sin1 = allocate_and_zero<double>(m_blockTableSize);
+        m_sin2 = allocate_and_zero<double>(m_blockTableSize);
+        m_cos1 = allocate_and_zero<double>(m_blockTableSize);
+        m_cos2 = allocate_and_zero<double>(m_blockTableSize);
         m_vr = allocate_and_zero<double>(m_half);
         m_vi = allocate_and_zero<double>(m_half);
         makeTables();
@@ -1672,6 +1677,10 @@ public:
         deallocate(m_d);
         deallocate(m_cos);
         deallocate(m_sin);
+        deallocate(m_sin1);
+        deallocate(m_sin2);
+        deallocate(m_cos1);
+        deallocate(m_cos2);
         deallocate(m_vr);
         deallocate(m_vi);
     }
@@ -1820,6 +1829,11 @@ private:
     double *m_d;
     double *m_cos;
     double *m_sin;
+    int m_blockTableSize;
+    double *m_sin1;
+    double *m_sin2;
+    double *m_cos1;
+    double *m_cos2;
     double *m_vr;
     double *m_vi;
 
@@ -1849,7 +1863,16 @@ private:
             m_table[i] = k;
         }
 
-        // additional factors for real-complex transform
+        // sin and cos tables for complex fft
+        for (i = 0; i < m_blockTableSize; ++i) {
+            double phase = 2.0 * M_PI / pow(2.0, double(i + 1));
+            m_sin1[i] = sin(phase);
+            m_sin2[i] = sin(2.0 * phase);
+            m_cos1[i] = cos(phase);
+            m_cos2[i] = cos(2.0 * phase);
+        }
+        
+        // sin and cos tables for real-complex transform
         for (i = 0; i < n/2; ++i) {
             double phase = M_PI * (double(i + 1) / double(m_half) + 0.5);
             m_cos[i] = cos(phase);
@@ -1929,9 +1952,7 @@ private:
         int i, j, k, m;
         int blockSize, blockEnd;
         double tr, ti;
-
-        double angle = 2.0 * M_PI;
-        if (inverse) angle = -angle;
+        double ifactor = (inverse ? -1.0 : 1.0);
 
         // because we are at heart a real-complex fft only
         const int n = m_half;
@@ -1953,14 +1974,27 @@ private:
         }
         
         blockEnd = 1;
+
+        int ix = 0;
         
         for (blockSize = 2; blockSize <= n; blockSize <<= 1) {
+
+            double sm1, sm2, cm1, cm2;
+
+            if (ix < m_blockTableSize) {
+                sm1 = ifactor * m_sin1[ix];
+                sm2 = ifactor * m_sin2[ix];
+                cm1 = m_cos1[ix];
+                cm2 = m_cos2[ix];
+                ++ix;
+            } else {
+                double delta = 2.0 * M_PI / double(blockSize);
+                sm1 = ifactor * sin(delta);
+                sm2 = ifactor * sin(2.0 * delta);
+                cm1 = cos(delta);
+                cm2 = cos(2.0 * delta);
+            }
             
-            double delta = angle / double(blockSize);
-            double sm2 = -sin(-2 * delta);
-            double sm1 = -sin(-delta);
-            double cm2 = cos(-2 * delta);
-            double cm1 = cos(-delta);
             double w = 2 * cm1;
             double ar[3], ai[3];
             
