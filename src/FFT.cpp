@@ -1651,15 +1651,15 @@ private:
 class D_Builtin : public FFTImpl
 {
 public:
-    D_Builtin(int size) : m_size(size), m_half(size/2), m_table(0) {
+    D_Builtin(int size) :
+        m_size(size),
+        m_half(size/2),
+        m_blockTableSize(16),
+        m_maxTabledBlock(1 << m_blockTableSize)
+    {
         m_table = allocate_and_zero<int>(m_half);
-        m_blockTableSize = 16;
-        m_sin1 = allocate_and_zero<double>(m_blockTableSize);
-        m_sin2 = allocate_and_zero<double>(m_blockTableSize);
-        m_cos1 = allocate_and_zero<double>(m_blockTableSize);
-        m_cos2 = allocate_and_zero<double>(m_blockTableSize);
-        m_sinr = allocate_and_zero<double>(m_half / 2);
-        m_cosr = allocate_and_zero<double>(m_half / 2);
+        m_sincos = allocate_and_zero<double>(m_blockTableSize * 4);
+        m_sincos_r = allocate_and_zero<double>(m_half);
         m_vr = allocate_and_zero<double>(m_half);
         m_vi = allocate_and_zero<double>(m_half);
         m_a = allocate_and_zero<double>(m_half + 1);
@@ -1675,12 +1675,8 @@ public:
 
     ~D_Builtin() {
         deallocate(m_table);
-        deallocate(m_sin1);
-        deallocate(m_sin2);
-        deallocate(m_cos1);
-        deallocate(m_cos2);
-        deallocate(m_sinr);
-        deallocate(m_cosr);
+        deallocate(m_sincos);
+        deallocate(m_sincos_r);
         deallocate(m_vr);
         deallocate(m_vi);
         deallocate(m_a);
@@ -1810,14 +1806,11 @@ public:
 private:
     const int m_size;
     const int m_half;
-    int m_blockTableSize;
+    const int m_blockTableSize;
+    const int m_maxTabledBlock;
     int *m_table;
-    double *m_sin1;
-    double *m_sin2;
-    double *m_cos1;
-    double *m_cos2;
-    double *m_sinr;
-    double *m_cosr;
+    double *m_sincos;
+    double *m_sincos_r;
     double *m_vr;
     double *m_vi;
     double *m_a;
@@ -1854,19 +1847,21 @@ private:
         }
 
         // sin and cos tables for complex fft
-        for (i = 0; i < m_blockTableSize; ++i) {
-            double phase = 2.0 * M_PI / pow(2.0, double(i + 1));
-            m_sin1[i] = sin(phase);
-            m_sin2[i] = sin(2.0 * phase);
-            m_cos1[i] = cos(phase);
-            m_cos2[i] = cos(2.0 * phase);
+        int ix = 0;
+        for (i = 2; i <= m_maxTabledBlock; i <<= 1) {
+            double phase = 2.0 * M_PI / double(i);
+            m_sincos[ix++] = sin(phase);
+            m_sincos[ix++] = sin(2.0 * phase);
+            m_sincos[ix++] = cos(phase);
+            m_sincos[ix++] = cos(2.0 * phase);
         }
         
         // sin and cos tables for real-complex transform
+        ix = 0;
         for (i = 0; i < n/2; ++i) {
             double phase = M_PI * (double(i + 1) / double(m_half) + 0.5);
-            m_cosr[i] = cos(phase);
-            m_sinr[i] = sin(phase);
+            m_sincos_r[ix++] = sin(phase);
+            m_sincos_r[ix++] = cos(phase);
         }
     }        
 
@@ -1884,9 +1879,10 @@ private:
         ro[0] = m_vr[0] + m_vi[0];
         ro[m_half] = m_vr[0] - m_vi[0];
         io[0] = io[m_half] = 0.0;
+        int ix = 0;
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cosr[i];
-            double s = -m_sinr[i];
+            double s = -m_sincos_r[ix++];
+            double c =  m_sincos_r[ix++];
             int k = i + 1;
             double r0 = m_vr[k];
             double i0 = m_vi[k];
@@ -1909,9 +1905,10 @@ private:
         int halfhalf = m_half / 2;
         m_vr[0] = ri[0] + ri[m_half];
         m_vi[0] = ri[0] - ri[m_half];
+        int ix = 0;
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cosr[i];
-            double s = m_sinr[i];
+            double s = m_sincos_r[ix++];
+            double c = m_sincos_r[ix++];
             int k = i + 1;
             double r0 = ri[k];
             double r1 = ri[m_half - k];
@@ -1971,12 +1968,11 @@ private:
 
             double sm1, sm2, cm1, cm2;
 
-            if (ix < m_blockTableSize) {
-                sm1 = ifactor * m_sin1[ix];
-                sm2 = ifactor * m_sin2[ix];
-                cm1 = m_cos1[ix];
-                cm2 = m_cos2[ix];
-                ++ix;
+            if (blockSize <= m_maxTabledBlock) {
+                sm1 = ifactor * m_sincos[ix++];
+                sm2 = ifactor * m_sincos[ix++];
+                cm1 = m_sincos[ix++];
+                cm2 = m_sincos[ix++];
             } else {
                 double delta = 2.0 * M_PI / double(blockSize);
                 sm1 = ifactor * sin(delta);
