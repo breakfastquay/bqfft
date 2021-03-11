@@ -1657,10 +1657,8 @@ public:
         m_b = allocate_and_zero<double>(m_half + 1);
         m_c = allocate_and_zero<double>(m_half + 1);
         m_d = allocate_and_zero<double>(m_half + 1);
-        m_cos_f = allocate_and_zero<double>(m_half / 2);
-        m_sin_f = allocate_and_zero<double>(m_half / 2);
-        m_cos_i = allocate_and_zero<double>(m_half / 2);
-        m_sin_i = allocate_and_zero<double>(m_half / 2);
+        m_cos = allocate_and_zero<double>(m_half / 2);
+        m_sin = allocate_and_zero<double>(m_half / 2);
         m_vr = allocate_and_zero<double>(m_half);
         m_vi = allocate_and_zero<double>(m_half);
         makeTables();
@@ -1672,10 +1670,8 @@ public:
         deallocate(m_b);
         deallocate(m_c);
         deallocate(m_d);
-        deallocate(m_cos_f);
-        deallocate(m_sin_f);
-        deallocate(m_cos_i);
-        deallocate(m_sin_i);
+        deallocate(m_cos);
+        deallocate(m_sin);
         deallocate(m_vr);
         deallocate(m_vi);
     }
@@ -1822,10 +1818,8 @@ private:
     double *m_b;
     double *m_c;
     double *m_d;
-    double *m_cos_f;
-    double *m_sin_f;
-    double *m_cos_i;
-    double *m_sin_i;
+    double *m_cos;
+    double *m_sin;
     double *m_vr;
     double *m_vi;
 
@@ -1858,10 +1852,8 @@ private:
         // additional factors for real-complex transform
         for (i = 0; i < n/2; ++i) {
             double phase = M_PI * (double(i + 1) / double(m_half) + 0.5);
-            m_cos_f[i] = cos(phase);
-            m_sin_f[i] = sin(phase);
-            m_cos_i[i] = cos(-phase);
-            m_sin_i[i] = sin(-phase);
+            m_cos[i] = cos(phase);
+            m_sin[i] = sin(phase);
         }
     }        
 
@@ -1880,8 +1872,8 @@ private:
         ro[m_half] = m_vr[0] - m_vi[0];
         io[0] = io[m_half] = 0.0;
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cos_f[i];
-            double s = -m_sin_f[i];
+            double c = m_cos[i];
+            double s = -m_sin[i];
             int k = i + 1;
             double r0 = m_vr[k];
             double i0 = m_vi[k];
@@ -1905,8 +1897,8 @@ private:
         m_vr[0] = ri[0] + ri[m_half];
         m_vi[0] = ri[0] - ri[m_half];
         for (int i = 0; i < halfhalf; ++i) {
-            double c = m_cos_f[i];
-            double s = m_sin_f[i];
+            double c = m_cos[i];
+            double s = m_sin[i];
             int k = i + 1;
             double r0 = ri[k];
             double r1 = ri[m_half - k];

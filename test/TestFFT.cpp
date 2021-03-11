@@ -175,6 +175,28 @@ ALL_IMPL_AUTO_TEST_CASE(sine)
     COMPARE_SCALED(back, in, 4);
 }
 
+ALL_IMPL_AUTO_TEST_CASE(sine_8)
+{
+    // Longer sine. With only 4 elements, the real transform only
+    // needs to get the DC and Nyquist bins right for its two complex
+    // sub-transforms. We need a longer test to check the real
+    // transform is working properly.
+    double cospi4 = 0.5 * sqrt(2.0);
+    double in[] = { 0, cospi4, 1.0, cospi4, 0.0, -cospi4, -1.0, -cospi4 };
+    double re[5], im[5];
+    USING_FFT(8);
+    fft.forward(in, re, im);
+    COMPARE_ALL(re, 0.0);
+    COMPARE_ZERO(im[0]);
+    COMPARE(im[1], -4.0);
+    COMPARE_ZERO(im[2]);
+    COMPARE_ZERO(im[3]);
+    COMPARE_ZERO(im[4]);
+    double back[8];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 8);
+}
+
 ALL_IMPL_AUTO_TEST_CASE(cosine)
 {
     // Cosine. Output is purely real
@@ -189,6 +211,25 @@ ALL_IMPL_AUTO_TEST_CASE(cosine)
     double back[4];
     fft.inverse(re, im, back);
     COMPARE_SCALED(back, in, 4);
+}
+
+ALL_IMPL_AUTO_TEST_CASE(cosine_8)
+{
+    // Longer cosine.
+    double cospi4 = 0.5 * sqrt(2.0);
+    double in[] = { 1.0, cospi4, 0.0, -cospi4, -1.0, -cospi4, 0.0, cospi4 };
+    double re[5], im[5];
+    USING_FFT(8);
+    fft.forward(in, re, im);
+    COMPARE_ALL(im, 0.0);
+    COMPARE_ZERO(re[0]);
+    COMPARE(re[1], 4.0);
+    COMPARE_ZERO(re[2]);
+    COMPARE_ZERO(re[3]);
+    COMPARE_ZERO(re[4]);
+    double back[8];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 8);
 }
 	
 ALL_IMPL_AUTO_TEST_CASE(sineCosine)
