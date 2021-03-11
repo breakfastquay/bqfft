@@ -1666,6 +1666,10 @@ public:
         m_b = allocate_and_zero<double>(m_half + 1);
         m_c = allocate_and_zero<double>(m_half + 1);
         m_d = allocate_and_zero<double>(m_half + 1);
+        m_a_and_b[0] = m_a;
+        m_a_and_b[1] = m_b;
+        m_c_and_d[0] = m_c;
+        m_c_and_d[1] = m_d;
         makeTables();
     }
 
@@ -1705,8 +1709,7 @@ public:
     void forwardInterleaved(const double *BQ_R__ realIn,
                             double *BQ_R__ complexOut) {
         transformF(realIn, m_c, m_d);
-        for (int i = 0; i <= m_half; ++i) complexOut[i*2] = m_c[i];
-        for (int i = 0; i <= m_half; ++i) complexOut[i*2+1] = m_d[i];
+        v_interleave(complexOut, m_c_and_d, 2, m_half + 1);
     }
 
     void forwardPolar(const double *BQ_R__ realIn,
@@ -1724,10 +1727,8 @@ public:
     void forward(const float *BQ_R__ realIn, float *BQ_R__ realOut,
                  float *BQ_R__ imagOut) {
         transformF(realIn, m_c, m_d);
-        for (int i = 0; i <= m_half; ++i) realOut[i] = m_c[i];
-        if (imagOut) {
-            for (int i = 0; i <= m_half; ++i) imagOut[i] = m_d[i];
-        }
+        v_convert(realOut, m_c, m_half + 1);
+        v_convert(imagOut, m_d, m_half + 1);
     }
 
     void forwardInterleaved(const float *BQ_R__ realIn,
@@ -1756,12 +1757,7 @@ public:
 
     void inverseInterleaved(const double *BQ_R__ complexIn,
                             double *BQ_R__ realOut) {
-        for (int i = 0; i <= m_half; ++i) {
-            double real = complexIn[i*2];
-            double imag = complexIn[i*2+1];
-            m_a[i] = real;
-            m_b[i] = imag;
-        }
+        v_deinterleave(m_a_and_b, complexIn, 2, m_half + 1);
         transformI(m_a, m_b, realOut);
     }
 
@@ -1783,23 +1779,15 @@ public:
 
     void inverse(const float *BQ_R__ realIn, const float *BQ_R__ imagIn,
                  float *BQ_R__ realOut) {
-        for (int i = 0; i <= m_half; ++i) {
-            float real = realIn[i];
-            float imag = imagIn[i];
-            m_a[i] = real;
-            m_b[i] = imag;
-        }
+        v_convert(m_a, realIn, m_half + 1);
+        v_convert(m_b, imagIn, m_half + 1);
         transformI(m_a, m_b, realOut);
     }
 
     void inverseInterleaved(const float *BQ_R__ complexIn,
                             float *BQ_R__ realOut) {
-        for (int i = 0; i <= m_half; ++i) {
-            float real = complexIn[i*2];
-            float imag = complexIn[i*2+1];
-            m_a[i] = real;
-            m_b[i] = imag;
-        }
+        for (int i = 0; i <= m_half; ++i) m_a[i] = complexIn[i*2];
+        for (int i = 0; i <= m_half; ++i) m_b[i] = complexIn[i*2+1];
         transformI(m_a, m_b, realOut);
     }
 
@@ -1836,6 +1824,8 @@ private:
     double *m_b;
     double *m_c;
     double *m_d;
+    double *m_a_and_b[2];
+    double *m_c_and_d[2];
 
     void makeTables() {
 
