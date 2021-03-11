@@ -769,15 +769,50 @@ ALL_IMPL_AUTO_TEST_CASE(sineCosine_7)
     COMPARE_SCALED(back, in, 7);
 }
 
+
 /*
- * 6. Slightly longer transform of random data (with a fixed seed for
- * repeatability). Must pass two tests: (i) same as DFT; (ii) inverse
- * produces original input (after scaling)
+ * 6. Slightly longer transforms of pseudorandom data.
  */
 
+ALL_IMPL_AUTO_TEST_CASE(random_precalc_16)
+{
+    double in[] = {
+        -0.24392125308057722, 0.03443898163344272, 0.3448145656738877,
+        -0.9625837464603908, 3.366568317669671, 0.9947191221586653,
+        -1.5038984435999945, 1.3859898682581235, -1.1230576306688778,
+        -1.6757487116512024, -1.5874436867863229, -2.0794018781307155,
+        -0.5450152775818973, 0.7530907176983748, 1.0743170685904255,
+        3.1787609811018775
+    };
+    double expected_re[] = {
+        1.41162899482, 7.63975551593, -1.20622641052, -1.77829578443,
+        3.12678465246, -2.84220463109, -7.17083743716, 0.497290409945,
+        -1.84690167439,
+    };
+    double expected_im[] = {
+        0.0, -4.67826048083, 8.58829211964, 4.96449646815,
+        1.41626511493, -3.77219223978, 6.96219662744, 2.23138519225,
+        0.0,
+    };
+    double re[9], im[9];
+    USING_FFT(16);
+    if (eps < 1e-11) {
+        eps = 1e-11;
+    }
+    fft.forward(in, re, im);
+    COMPARE_ARR(re, expected_re, 9);
+    COMPARE_ARR(im, expected_im, 9);
+    double back[16];
+    fft.inverse(re, im, back);
+    COMPARE_SCALED(back, in, 16);
+}
+
+/* This one has data from a PRNG, with a fixed seed. Must pass two
+ * tests: (i) same as DFT; (ii) inverse produces original input (after
+ * scaling) */
 ALL_IMPL_AUTO_TEST_CASE(random)
 {
-    const int n = 16;
+    const int n = 64;
     double *in = new double[n];
     double *re = new double[n/2 + 1];
     double *im = new double[n/2 + 1];
@@ -789,8 +824,8 @@ ALL_IMPL_AUTO_TEST_CASE(random)
         in[i] = drand48() * 4.0 - 2.0;
     }
     USING_FFT(n);
-    if (eps < 1e-12) {
-        eps = 1e-12;
+    if (eps < 1e-11) {
+        eps = 1e-11;
     }
     fft.forward(in, re, im);
     fft.inverse(re, im, back);

@@ -1914,12 +1914,12 @@ private:
             double r1 = ri[m_half - k];
             double i0 = ii[k];
             double i1 = -ii[m_half - k];
-            double tw_r = (r0 - r1) * c - (i0 + i1) * s;
-            double tw_i = (r0 - r1) * s + (i0 + i1) * c;
+            double tw_r = (r0 - r1) * c - (i0 - i1) * s;
+            double tw_i = (r0 - r1) * s + (i0 - i1) * c;
             m_vr[k] = (r0 + r1 + tw_r);
             m_vr[m_half - k] = (r0 + r1 - tw_r);
-            m_vi[k] = (i0 - i1 + tw_i);
-            m_vi[m_half - k] = (tw_i  - i0 + i1);
+            m_vi[k] = (i0 + i1 + tw_i);
+            m_vi[m_half - k] = (tw_i - i0 - i1);
         }
         transformComplex(m_vr, m_vi, m_c, m_d, true);
         for (int i = 0; i < m_half; ++i) {
