@@ -1935,37 +1935,20 @@ private:
         // Following Don Cross's 1998 implementation, described by its
         // author as public domain.
         
-        if (!ri || !ro || !io) return;
-
-        int i, j, k, m;
-        int blockSize, blockEnd;
-        double tr, ti;
-        double ifactor = (inverse ? -1.0 : 1.0);
-
-        // because we are at heart a real-complex fft only
+        // Because we are at heart a real-complex fft only, and we know that:
         const int n = m_half;
 
-        if (ii) {
-            for (i = 0; i < n; ++i) {
-                ro[m_table[i]] = ri[i];
-            }
-            for (i = 0; i < n; ++i) {
-                io[m_table[i]] = ii[i];
-            }
-        } else {
-            for (i = 0; i < n; ++i) {
-                ro[m_table[i]] = ri[i];
-            }
-            for (i = 0; i < n; ++i) {
-                io[m_table[i]] = 0.0;
-            }
+        for (int i = 0; i < n; ++i) {
+            int j = m_table[i];
+            ro[j] = ri[i];
+            io[j] = ii[i];
         }
         
-        blockEnd = 1;
-
         int ix = 0;
+        int blockEnd = 1;
+        double ifactor = (inverse ? -1.0 : 1.0);
         
-        for (blockSize = 2; blockSize <= n; blockSize <<= 1) {
+        for (int blockSize = 2; blockSize <= n; blockSize <<= 1) {
 
             double sm1, sm2, cm1, cm2;
 
@@ -1975,17 +1958,17 @@ private:
                 cm1 = m_sincos[ix++];
                 cm2 = m_sincos[ix++];
             } else {
-                double delta = 2.0 * M_PI / double(blockSize);
-                sm1 = ifactor * sin(delta);
-                sm2 = ifactor * sin(2.0 * delta);
-                cm1 = cos(delta);
-                cm2 = cos(2.0 * delta);
+                double phase = 2.0 * M_PI / double(blockSize);
+                sm1 = ifactor * sin(phase);
+                sm2 = ifactor * sin(2.0 * phase);
+                cm1 = cos(phase);
+                cm2 = cos(2.0 * phase);
             }
             
             double w = 2 * cm1;
             double ar[3], ai[3];
             
-            for (i = 0; i < n; i += blockSize) {
+            for (int i = 0; i < n; i += blockSize) {
                 
                 ar[2] = cm2;
                 ar[1] = cm1;
@@ -1993,9 +1976,9 @@ private:
                 ai[2] = sm2;
                 ai[1] = sm1;
 
-                j = i;
+                int j = i;
                 
-                for (m = 0; m < blockEnd; ++m) {
+                for (int m = 0; m < blockEnd; ++m) {
                     
                     ar[0] = w * ar[1] - ar[2];
                     ar[2] = ar[1];
@@ -2005,9 +1988,9 @@ private:
                     ai[2] = ai[1];
                     ai[1] = ai[0];
 
-                    k = j + blockEnd;
-                    tr = ar[0] * ro[k] - ai[0] * io[k];
-                    ti = ar[0] * io[k] + ai[0] * ro[k];
+                    int k = j + blockEnd;
+                    double tr = ar[0] * ro[k] - ai[0] * io[k];
+                    double ti = ar[0] * io[k] + ai[0] * ro[k];
 
                     ro[k] = ro[j] - tr;
                     io[k] = io[j] - ti;
