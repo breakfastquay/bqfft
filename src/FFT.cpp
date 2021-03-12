@@ -1932,7 +1932,8 @@ private:
                           double *BQ_R__ ro, double *BQ_R__ io,
                           bool inverse) {
 
-        // Following the method of Don Cross's 1996 Pascal implementation
+        // Following Don Cross's 1998 implementation, described by its
+        // author as public domain.
         
         if (!ri || !ro || !io) return;
 
