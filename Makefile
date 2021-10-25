@@ -1,6 +1,6 @@
 
-# Add to FFT_DEFINES the relevant options for your desired third-party
-# library support.
+# Add to FFT_DEFINES the relevant options for your desired
+# implementation and/or third-party library support.
 #
 # Available library options are
 #
