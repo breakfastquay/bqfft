@@ -110,19 +110,15 @@ BOOST_AUTO_TEST_SUITE(TestFFT)
 #define ALL_IMPL_AUTO_TEST_CASE(name) \
     void performTest_##name (); \
     ONE_IMPL_AUTO_TEST_CASE(name, ipp); \
+    ONE_IMPL_AUTO_TEST_CASE(name, vdsp); \
     ONE_IMPL_AUTO_TEST_CASE(name, fftw); \
     ONE_IMPL_AUTO_TEST_CASE(name, kissfft); \
-    ONE_IMPL_AUTO_TEST_CASE(name, vdsp); \
-    ONE_IMPL_AUTO_TEST_CASE(name, medialib); \
-    ONE_IMPL_AUTO_TEST_CASE(name, openmax); \
-    ONE_IMPL_AUTO_TEST_CASE(name, sfft); \
     ONE_IMPL_AUTO_TEST_CASE(name, builtin); \
     ONE_IMPL_AUTO_TEST_CASE(name, dft); \
     void performTest_##name ()
 
 std::string all_implementations[] = {
-    "ipp", "vdsp", "fftw", "sfft", "openmax",
-    "medialib", "kissfft", "builtin", "dft"
+    "ipp", "vdsp", "fftw", "kissfft", "builtin", "dft"
 };
 
 BOOST_AUTO_TEST_CASE(showImplementations)
