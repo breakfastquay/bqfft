@@ -1,8 +1,9 @@
-image: ubuntu/18.04
+image: ubuntu/20.04
 packages:
   - libboost-test-dev
   - valgrind
   - libfftw3-dev
+  - libsleef-dev
   - curl
 sources:
   - hg+https://hg.sr.ht/~breakfastquay/bqfft
