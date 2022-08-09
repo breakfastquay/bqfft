@@ -112,13 +112,14 @@ BOOST_AUTO_TEST_SUITE(TestFFT)
     ONE_IMPL_AUTO_TEST_CASE(name, ipp); \
     ONE_IMPL_AUTO_TEST_CASE(name, vdsp); \
     ONE_IMPL_AUTO_TEST_CASE(name, fftw); \
+    ONE_IMPL_AUTO_TEST_CASE(name, sleef); \
     ONE_IMPL_AUTO_TEST_CASE(name, kissfft); \
     ONE_IMPL_AUTO_TEST_CASE(name, builtin); \
     ONE_IMPL_AUTO_TEST_CASE(name, dft); \
     void performTest_##name ()
 
 std::string all_implementations[] = {
-    "ipp", "vdsp", "fftw", "kissfft", "builtin", "dft"
+    "ipp", "vdsp", "fftw", "sleef", "kissfft", "builtin", "dft"
 };
 
 BOOST_AUTO_TEST_CASE(showImplementations)
