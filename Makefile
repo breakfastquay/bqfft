@@ -7,6 +7,7 @@
 #  -DHAVE_IPP         Intel's Integrated Performance Primitives are available
 #  -DHAVE_VDSP        Apple's Accelerate framework is available
 #  -DHAVE_FFTW3       The FFTW library is available
+#  -DHAVE_SLEEF       The SLEEF library is available
 #  -DHAVE_KISSFFT     The KissFFT library is available
 #  -DUSE_BUILTIN_FFT  Compile the built-in FFT code (which is not bad)
 #
